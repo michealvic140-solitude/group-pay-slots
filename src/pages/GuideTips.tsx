@@ -28,7 +28,7 @@ export default function GuideTips() {
 
   const loadTips = async () => {
     const { data } = await supabase.from("guide_tips").select("*").order("created_at");
-    if (data) setTips(data as GuideTip[]);
+    if (data) setTips(data as unknown as GuideTip[]);
     setLoading(false);
   };
 

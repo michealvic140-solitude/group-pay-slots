@@ -28,7 +28,7 @@ export default function Disbursements() {
     if (!currentUser) return;
     (async () => {
       const { data } = await supabase.from("disbursements").select("*").eq("user_id", currentUser.id).order("created_at", { ascending: false });
-      if (data) setDisbursements(data as Disbursement[]);
+      if (data) setDisbursements(data as unknown as Disbursement[]);
       setLoading(false);
     })();
   }, [currentUser]);
