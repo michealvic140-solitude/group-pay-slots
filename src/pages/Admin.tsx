@@ -588,19 +588,21 @@ export default function Admin() {
                 <div key={t.id} className="glass-card-static rounded-xl p-4 border border-gold/10">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="text-foreground font-semibold text-sm">{t.subject}</h3>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${t.status==="open"?"text-blue-400 border-blue-600/30 bg-blue-900/20":t.status==="replied"?"text-emerald-400 border-emerald-600/30 bg-emerald-900/20":"text-muted-foreground border-muted/30 bg-muted/20"}`}>{t.status}</span>
-                      <Btn variant={t.status==="closed"?"green":"red"} size="xs" onClick={()=>toggleTicketStatus(t.id,t.status)}>
-                        {t.status==="closed"?<><RefreshCw size={9}/>Reopen</>:<><X size={9}/>Close</>}
-                      </Btn>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${t.status==="open"?"text-blue-400 border-blue-600/30 bg-blue-900/20":t.status==="replied"?"text-emerald-400 border-emerald-600/30 bg-emerald-900/20":t.status==="solved"?"text-purple-400 border-purple-600/30 bg-purple-900/20":t.status==="escalated"?"text-red-400 border-red-600/30 bg-red-900/20":"text-muted-foreground border-muted/30 bg-muted/20"}`}>{t.status}</span>
                     </div>
                   </div>
                   <p className="text-muted-foreground text-xs mb-2">{t.message}</p>
                   {t.attachmentUrl && <a href={t.attachmentUrl} target="_blank" rel="noreferrer" className="text-gold text-xs underline mb-2 block">View User Attachment</a>}
                   {t.adminReply && <div className="p-2 rounded-lg bg-gold/5 border border-gold/20 mb-2"><p className="text-xs text-gold font-bold mb-1">Your Reply:</p><p className="text-xs">{t.adminReply}</p>{t.adminReplyAttachment && <a href={t.adminReplyAttachment} target="_blank" rel="noreferrer" className="text-gold text-xs underline">View Attachment</a>}</div>}
-                  <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
                     <p className="text-muted-foreground/40 text-[9px]">{new Date(t.createdAt).toLocaleString()}</p>
-                    {t.status !== "closed" && <Btn variant="gold" size="xs" onClick={()=>{setShowSupportReply(t.id);setSupportReplyText("");}}><Reply size={9}/>Reply</Btn>}
+                    <div className="flex gap-1 flex-wrap">
+                      {t.status !== "closed" && <Btn variant="gold" size="xs" onClick={()=>{setShowSupportReply(t.id);setSupportReplyText("");}}><Reply size={9}/>Reply</Btn>}
+                      {t.status !== "solved" && t.status !== "closed" && <Btn variant="blue" size="xs" onClick={()=>updateTicketStatus(t.id,"solved")}><CheckCircle size={9}/>Solved</Btn>}
+                      {t.status !== "escalated" && t.status !== "closed" && <Btn variant="amber" size="xs" onClick={()=>updateTicketStatus(t.id,"escalated")}><AlertTriangle size={9}/>Escalate</Btn>}
+                      {t.status === "closed" ? <Btn variant="green" size="xs" onClick={()=>updateTicketStatus(t.id,"open")}><RefreshCw size={9}/>Reopen</Btn> : <Btn variant="red" size="xs" onClick={()=>updateTicketStatus(t.id,"closed")}><X size={9}/>Close</Btn>}
+                    </div>
                   </div>
                 </div>
               ))}
