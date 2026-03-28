@@ -231,7 +231,7 @@ export default function Admin() {
       if (up) { const { data: u } = supabase.storage.from("disbursement-proofs").getPublicUrl(up.path); imageUrl = u.publicUrl; }
     }
     const selectedGroup = groups.find(g => g.id === disbGroupId);
-    await supabase.from("disbursements").insert({ user_id: disbUserId, group_id: disbGroupId, group_name: selectedGroup?.name || "", amount: parseFloat(disbAmount), description: disbDesc || null, seat_numbers: disbSeats || null, image_url: imageUrl || null, admin_id: currentUser!.id, admin_name: currentUser?.username || "Admin" });
+    await supabase.from("disbursements").insert({ user_id: disbUserId, group_id: disbGroupId, group_name: selectedGroup?.name || "", amount: parseFloat(disbAmount), description: disbDesc || null, seat_numbers: disbSeats || null, proof_url: imageUrl || null });
     // Mark seats as disbursed if provided
     if (disbSeats) {
       const seatNums = disbSeats.split("+").map(s => parseInt(s.replace(/\D/g,"")));
@@ -245,7 +245,7 @@ export default function Admin() {
   };
 
   const resolveDebt = async (debtId: string) => {
-    await supabase.from("user_debts").update({ resolved: true, resolved_at: new Date().toISOString() }).eq("id", debtId);
+    await supabase.from("user_debts").update({ is_paid: true }).eq("id", debtId);
     await loadData();
   };
 
