@@ -70,7 +70,7 @@ export default function Register() {
           action: "You accepted the platform terms and conditions before creating this account",
           type: "user",
         });
-        navigate("/dashboard", { replace: true });
+        navigate("/login", { state: { message: "Account created! Please check your email for a confirmation link, then login." } });
       }
     } catch (err: unknown) {
       setError((err as Error).message || "Registration failed. Please try again.");
@@ -96,12 +96,11 @@ export default function Register() {
       <div className="relative w-full max-w-2xl animate-scale-in">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-full bg-gold-gradient flex items-center justify-center animate-glow-pulse">
-              <span className="text-obsidian font-cinzel font-black">RA</span>
-            </div>
+            <img src={rtaspLogo} alt="RTRASP" className="w-10 h-10 rounded-full object-contain" />
           </Link>
           <h1 className="gold-gradient-text text-3xl font-cinzel font-bold">Create Account</h1>
-          <p className="text-muted-foreground text-sm mt-2">Join the Rejoice Ajo savings community</p>
+          <p className="text-muted-foreground text-sm mt-2">Join the RTRASP savings community</p>
+          <p className="text-amber-400 text-xs mt-1">📧 After registration, check your email for a confirmation link to activate your account.</p>
         </div>
 
         {/* Step indicators */}
