@@ -122,7 +122,7 @@ export interface SupportTicket {
   subject: string;
   message: string;
   attachmentUrl?: string;
-  status: "open" | "replied" | "closed";
+  status: "open" | "replied" | "closed" | "solved" | "escalated";
   createdAt: string;
   adminReply?: string;
   adminReplyAttachment?: string;

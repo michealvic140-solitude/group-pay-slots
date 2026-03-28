@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Shield, Trophy, Users, Zap, Star, TrendingUp, Phone, Mail, MessageSquare, Facebook, Megaphone, Info, Tag, Server } from "lucide-react";
+import { ArrowRight, Shield, Trophy, Users, Zap, Star, TrendingUp, Phone, Mail, MessageSquare, Facebook, Megaphone, Info, Tag, Server, BookOpen, HelpCircle, HeadphonesIcon } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import GroupCard from "@/components/GroupCard";
 import ParticleBackground from "@/components/ParticleBackground";
+import rtaspLogo from "@/assets/rtrasp-logo.png";
 import promo1 from "@/assets/promo-1.png";
 import promo2 from "@/assets/promo-2.png";
 import promo3 from "@/assets/promo-3.png";
@@ -58,10 +59,10 @@ export default function Landing() {
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[radial-gradient(ellipse,rgba(234,179,8,0.06)_0%,transparent_70%)] pointer-events-none" />
         <div className="relative max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 glass-card-static px-4 py-2 rounded-full mb-8 animate-fade-up">
-            <div className="w-5 h-5 rounded-full bg-gold-gradient" />
-            <span className="text-gold text-xs font-semibold tracking-widest uppercase">Rejoice Ajo Platform</span>
+            <img src={rtaspLogo} alt="RTRASP" className="w-6 h-6 rounded-full object-contain" />
+            <span className="text-gold text-xs font-semibold tracking-widest uppercase">RTRASP</span>
           </div>
-          <h1 className="gold-gradient-text text-5xl md:text-7xl font-cinzel font-black mb-6 leading-tight animate-fade-up delay-100">Rejoice Ajo</h1>
+          <h1 className="gold-gradient-text text-4xl md:text-6xl font-cinzel font-black mb-6 leading-tight animate-fade-up delay-100">Rejoice Trust Rotation Ajo Savings Platform</h1>
           <p className="text-xl md:text-2xl text-muted-foreground font-light mb-4 max-w-3xl mx-auto leading-relaxed animate-fade-up delay-200">
             Join trusted savings circles and build financial discipline through structured rotating contributions.
           </p>
@@ -174,11 +175,50 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ABOUT */}
+      <section className="py-20 px-4" id="about">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-muted-foreground text-xs uppercase tracking-widest mb-2">About Us</p>
+            <h2 className="gold-gradient-text text-3xl md:text-4xl font-cinzel font-bold">What is RTRASP?</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="glass-card-static rounded-2xl p-8 border border-gold/15">
+              <h3 className="gold-text font-cinzel font-bold text-lg mb-4">Our Mission</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                Rejoice Trust Rotation Ajo Savings Platform (RTRASP) is a secure, community-driven rotating savings platform built for Nigerians who want to save money together in a trusted and transparent environment.
+              </p>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Our platform digitizes the traditional Ajo/Esusu/ROSCA system, making it more secure, transparent, and accessible. Every contribution is tracked, every payout is documented, and every member is verified.
+              </p>
+            </div>
+            <div className="glass-card-static rounded-2xl p-8 border border-gold/15">
+              <h3 className="gold-text font-cinzel font-bold text-lg mb-4">How It Works</h3>
+              <ul className="space-y-3 text-muted-foreground text-sm">
+                <li className="flex items-start gap-2"><span className="text-gold font-bold">1.</span> Create an account and verify your identity</li>
+                <li className="flex items-start gap-2"><span className="text-gold font-bold">2.</span> Browse and join available savings groups</li>
+                <li className="flex items-start gap-2"><span className="text-gold font-bold">3.</span> Select your seat and make contributions on schedule</li>
+                <li className="flex items-start gap-2"><span className="text-gold font-bold">4.</span> Receive your full payout when your turn comes</li>
+                <li className="flex items-start gap-2"><span className="text-gold font-bold">5.</span> Admin verifies all payments and manages disbursements</li>
+              </ul>
+            </div>
+          </div>
+          <div className="glass-card-static rounded-2xl p-8 border border-gold/15 mt-8">
+            <h3 className="gold-text font-cinzel font-bold text-lg mb-4 text-center">Why Choose RTRASP?</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+              <div><Shield size={28} className="mx-auto text-gold mb-2" /><p className="text-foreground font-bold text-sm">100% Transparent</p><p className="text-muted-foreground text-xs mt-1">Every transaction and payout is visible and traceable</p></div>
+              <div><Users size={28} className="mx-auto text-gold mb-2" /><p className="text-foreground font-bold text-sm">Community Trust</p><p className="text-muted-foreground text-xs mt-1">KYC verification and trust scoring for all members</p></div>
+              <div><Zap size={28} className="mx-auto text-gold mb-2" /><p className="text-foreground font-bold text-sm">Admin Protected</p><p className="text-muted-foreground text-xs mt-1">Dedicated admin team monitoring all activities 24/7</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* HOW IT WORKS */}
       <section className="py-20 px-4">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="gold-gradient-text text-3xl md:text-4xl font-cinzel font-bold">How Rejoice Ajo Works</h2>
+            <h2 className="gold-gradient-text text-3xl md:text-4xl font-cinzel font-bold">How RTRASP Works</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {steps.map((s, i) => (
@@ -190,6 +230,37 @@ export default function Landing() {
                 <p className="text-muted-foreground text-xs leading-relaxed">{s.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* USER GUIDE & TIPS */}
+      <section className="py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-muted-foreground text-xs uppercase tracking-widest mb-2">User Guide</p>
+            <h2 className="gold-gradient-text text-3xl md:text-4xl font-cinzel font-bold">Tips & Guidelines</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { icon: BookOpen, title: "Always Pay On Time", desc: "Make your contributions before the timer resets. Late payments may result in being marked as a defaulter/debtor." },
+              { icon: HelpCircle, title: "Verify Your Details", desc: "Ensure your bank details and personal information are correct to avoid payout issues." },
+              { icon: HeadphonesIcon, title: "Need Help? Contact Support", desc: "Create a support ticket from your dashboard if you encounter any issues. Our team responds promptly." },
+              { icon: Shield, title: "Keep Your Account Secure", desc: "Use a strong password and check your email to confirm your account after registration." },
+            ].map((tip, i) => (
+              <div key={tip.title} className="glass-card-static rounded-2xl p-6 border border-gold/10 flex items-start gap-4" style={{ animationDelay: `${i * 0.1}s` }}>
+                <div className="w-10 h-10 rounded-xl bg-gold/15 border border-gold/25 flex items-center justify-center shrink-0">
+                  <tip.icon size={18} className="text-gold" />
+                </div>
+                <div>
+                  <h3 className="gold-text font-bold text-sm mb-1 font-cinzel">{tip.title}</h3>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{tip.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link to="/guide" className="btn-glass px-6 py-3 rounded-xl text-sm inline-flex items-center gap-2">View All Guide Tips <ArrowRight size={16} /></Link>
           </div>
         </div>
       </section>
@@ -252,8 +323,8 @@ export default function Landing() {
       </section>
 
       <footer className="py-8 px-4 border-t border-gold/10 text-center">
-        <p className="gold-gradient-text font-cinzel font-bold text-sm">REJOICE TRUST AJO PLATFORM</p>
-        <p className="text-muted-foreground text-xs mt-2">© 2026 Rejoice Trust Ajo. All rights reserved.</p>
+        <p className="gold-gradient-text font-cinzel font-bold text-sm">REJOICE TRUST ROTATION AJO SAVINGS PLATFORM (RTRASP)</p>
+        <p className="text-muted-foreground text-xs mt-2">© 2026 RTRASP. All rights reserved.</p>
       </footer>
     </div>
   );

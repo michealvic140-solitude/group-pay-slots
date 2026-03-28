@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import ParticleBackground from "@/components/ParticleBackground";
+import rtaspLogo from "@/assets/rtrasp-logo.png";
 
 const Coin = ({ style }: { style: React.CSSProperties }) => (
   <div className="absolute rounded-full flex items-center justify-center font-black select-none pointer-events-none"
@@ -91,15 +92,15 @@ export default function Login() {
         <div className="rounded-2xl p-8 md:p-10 border border-white/10"
           style={{ background: "rgba(10,10,10,0.80)", backdropFilter: "blur(32px)", WebkitBackdropFilter: "blur(32px)", boxShadow: "0 0 60px rgba(234,179,8,0.08), 0 32px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-gold-gradient flex items-center justify-center"><span className="text-obsidian font-cinzel font-black text-xs">RA</span></div>
-            <span className="gold-gradient-text font-cinzel font-bold text-sm tracking-widest">RTA</span>
+            <img src={rtaspLogo} alt="RTRASP" className="w-8 h-8 rounded-full object-contain" />
+            <span className="gold-gradient-text font-cinzel font-bold text-sm tracking-widest">RTRASP</span>
           </div>
           {message && <div className="mb-4 px-3 py-2 rounded-lg bg-amber-900/20 border border-amber-600/30 text-amber-400 text-xs">{message}</div>}
           <div className="text-center mb-8 mt-4">
-            <h1 className="font-cinzel font-black text-3xl md:text-4xl leading-tight mb-1"
-              style={{ background: "linear-gradient(135deg, #d4a017, #f0c040, #c8860a, #eab308)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: "0.05em" }}>REJOICE TRUST</h1>
-            <h2 className="font-cinzel font-black text-3xl md:text-4xl leading-tight"
-              style={{ background: "linear-gradient(135deg, #d4a017, #f0c040, #c8860a, #eab308)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: "0.05em" }}>AJO PLATFORM</h2>
+            <h1 className="font-cinzel font-black text-2xl md:text-3xl leading-tight mb-1"
+              style={{ background: "linear-gradient(135deg, #d4a017, #f0c040, #c8860a, #eab308)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: "0.05em" }}>REJOICE TRUST ROTATION</h1>
+            <h2 className="font-cinzel font-black text-2xl md:text-3xl leading-tight"
+              style={{ background: "linear-gradient(135deg, #d4a017, #f0c040, #c8860a, #eab308)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: "0.05em" }}>AJO SAVINGS PLATFORM</h2>
             <p className="text-muted-foreground text-xs mt-3 tracking-widest uppercase">Sign in to your account</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
