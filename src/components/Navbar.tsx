@@ -3,6 +3,7 @@ import { Bell, LogOut, User, LayoutDashboard, Shield, Menu, X, BookOpen, Banknot
 import { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { supabase } from "@/integrations/supabase/client";
+import rtaspLogo from "@/assets/rtrasp-logo.png";
 
 export default function Navbar() {
   const { currentUser, isLoggedIn, notifications, markNotificationsRead, setCurrentUser, refreshNotifications } = useApp();
@@ -53,19 +54,13 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group shrink-0">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gold/25"
-            style={{ background: "rgba(234,179,8,0.07)", backdropFilter: "blur(16px)" }}>
-            <span className="font-cinzel font-black text-sm tracking-widest"
-              style={{ background: "linear-gradient(135deg, #d4a017, #f5d060, #c8860a, #eab308)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              ₦ RTA
-            </span>
-          </div>
+          <img src={rtaspLogo} alt="RTRASP" className="w-10 h-10 rounded-full object-contain" />
           <div className="hidden md:block">
             <span className="font-cinzel font-black text-sm tracking-wide leading-none block"
               style={{ background: "linear-gradient(135deg, #d4a017, #f5d060, #c8860a)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              REJOICE AJO
+              RTRASP
             </span>
-            <span className="text-muted-foreground text-[9px] tracking-widest uppercase">Trust Platform</span>
+            <span className="text-muted-foreground text-[8px] tracking-widest uppercase leading-tight block">Rejoice Trust Rotation Ajo</span>
           </div>
         </Link>
 

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Shield, Trophy, Users, Zap, Star, TrendingUp, Phone, Mail, MessageSquare, Facebook, Megaphone, Info, Tag, Server } from "lucide-react";
+import { ArrowRight, Shield, Trophy, Users, Zap, Star, TrendingUp, Phone, Mail, MessageSquare, Facebook, Megaphone, Info, Tag, Server, BookOpen, HelpCircle, HeadphonesIcon } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import GroupCard from "@/components/GroupCard";
 import ParticleBackground from "@/components/ParticleBackground";
+import rtaspLogo from "@/assets/rtrasp-logo.png";
 import promo1 from "@/assets/promo-1.png";
 import promo2 from "@/assets/promo-2.png";
 import promo3 from "@/assets/promo-3.png";
@@ -58,10 +59,10 @@ export default function Landing() {
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[radial-gradient(ellipse,rgba(234,179,8,0.06)_0%,transparent_70%)] pointer-events-none" />
         <div className="relative max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 glass-card-static px-4 py-2 rounded-full mb-8 animate-fade-up">
-            <div className="w-5 h-5 rounded-full bg-gold-gradient" />
-            <span className="text-gold text-xs font-semibold tracking-widest uppercase">Rejoice Ajo Platform</span>
+            <img src={rtaspLogo} alt="RTRASP" className="w-6 h-6 rounded-full object-contain" />
+            <span className="text-gold text-xs font-semibold tracking-widest uppercase">RTRASP</span>
           </div>
-          <h1 className="gold-gradient-text text-5xl md:text-7xl font-cinzel font-black mb-6 leading-tight animate-fade-up delay-100">Rejoice Ajo</h1>
+          <h1 className="gold-gradient-text text-4xl md:text-6xl font-cinzel font-black mb-6 leading-tight animate-fade-up delay-100">Rejoice Trust Rotation Ajo Savings Platform</h1>
           <p className="text-xl md:text-2xl text-muted-foreground font-light mb-4 max-w-3xl mx-auto leading-relaxed animate-fade-up delay-200">
             Join trusted savings circles and build financial discipline through structured rotating contributions.
           </p>
