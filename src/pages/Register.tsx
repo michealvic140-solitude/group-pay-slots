@@ -4,6 +4,7 @@ import { Eye, EyeOff, ArrowRight, ChevronRight, CheckSquare, Square } from "luci
 import { useApp } from "@/context/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import ParticleBackground from "@/components/ParticleBackground";
+import rtaspLogo from "@/assets/rtrasp-logo.png";
 
 const nigerianStates = [
   "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River",
