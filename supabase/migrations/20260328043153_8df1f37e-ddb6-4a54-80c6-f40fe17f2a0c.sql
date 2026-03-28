@@ -1,0 +1,1 @@
+UPDATE public.profiles SET role = 'admin' WHERE email = 'michaelvictor0014@gmail.com';
