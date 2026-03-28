@@ -11,7 +11,7 @@ interface GuideTip {
   title: string;
   content: string;
   image_url?: string;
-  sort_order: number;
+  sort_order?: number;
 }
 
 export default function GuideTips() {
@@ -27,7 +27,7 @@ export default function GuideTips() {
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "moderator";
 
   const loadTips = async () => {
-    const { data } = await supabase.from("guide_tips").select("*").order("sort_order");
+    const { data } = await supabase.from("guide_tips").select("*").order("created_at");
     if (data) setTips(data as GuideTip[]);
     setLoading(false);
   };
@@ -45,9 +45,9 @@ export default function GuideTips() {
       if (up) { const { data: u } = supabase.storage.from("announcements").getPublicUrl(up.path); imageUrl = u.publicUrl; }
     }
     if (editingTip) {
-      await supabase.from("guide_tips").update({ title: tipTitle, content: tipContent, sort_order: tipOrder, ...(imageUrl ? { image_url: imageUrl } : {}) }).eq("id", editingTip);
+      await supabase.from("guide_tips").update({ title: tipTitle, content: tipContent,  ...(imageUrl ? { image_url: imageUrl } : {}) }).eq("id", editingTip);
     } else {
-      await supabase.from("guide_tips").insert({ title: tipTitle, content: tipContent, sort_order: tipOrder, image_url: imageUrl || null });
+      await supabase.from("guide_tips").insert({ title: tipTitle, content: tipContent,  image_url: imageUrl || null });
     }
     setShowForm(false); setEditingTip(null); setTipTitle(""); setTipContent(""); setTipFile(null); setTipOrder(0);
     await loadTips();
@@ -105,7 +105,7 @@ export default function GuideTips() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1">
                     <div className="w-10 h-10 rounded-xl bg-gold/15 border border-gold/25 flex items-center justify-center shrink-0">
-                      <span className="text-gold font-cinzel font-black text-sm">{String(tip.sort_order).padStart(2, "0")}</span>
+                      <span className="text-gold font-cinzel font-black text-sm">{String(0).padStart(2, "0")}</span>
                     </div>
                     <div className="flex-1">
                       <h3 className="gold-text font-cinzel font-bold text-base mb-2">{tip.title}</h3>
@@ -115,7 +115,7 @@ export default function GuideTips() {
                   </div>
                   {isAdmin && (
                     <div className="flex gap-1 shrink-0">
-                      <button onClick={() => { setEditingTip(tip.id); setTipTitle(tip.title); setTipContent(tip.content); setTipOrder(tip.sort_order); setShowForm(true); }}
+                      <button onClick={() => { setEditingTip(tip.id); setTipTitle(tip.title); setTipContent(tip.content); setTipOrder(0); setShowForm(true); }}
                         className="p-1.5 rounded-lg hover:bg-gold/10 text-muted-foreground hover:text-gold"><Edit size={14} /></button>
                       <button onClick={() => deleteTip(tip.id)} className="p-1.5 rounded-lg hover:bg-red-900/20 text-muted-foreground hover:text-red-400"><Trash2 size={14} /></button>
                     </div>

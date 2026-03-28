@@ -15,7 +15,7 @@ interface Disbursement {
   image_url?: string;
   code: string;
   created_at: string;
-  admin_name: string;
+  
 }
 
 export default function Disbursements() {
@@ -63,7 +63,7 @@ export default function Disbursements() {
                     {d.seat_numbers && <p className="text-muted-foreground text-xs">Seats: {d.seat_numbers}</p>}
                     <p className="gold-gradient-text font-cinzel font-black text-2xl mt-2">₦{d.amount.toLocaleString()}</p>
                     {d.description && <p className="text-muted-foreground text-xs mt-2">{d.description}</p>}
-                    <p className="text-muted-foreground/50 text-[10px] mt-2">By {d.admin_name} · {new Date(d.created_at).toLocaleString()}</p>
+                    <p className="text-muted-foreground/50 text-[10px] mt-2">By {"Admin"} · {new Date(d.created_at).toLocaleString()}</p>
                   </div>
                   {d.image_url && (
                     <button onClick={() => setViewImage(d.image_url!)} className="btn-glass px-3 py-2 rounded-xl text-xs flex items-center gap-1">
