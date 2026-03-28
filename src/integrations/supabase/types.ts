@@ -730,6 +730,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_and_mark_defaulters: { Args: never; Returns: undefined }
       get_leaderboard: {
         Args: never
         Returns: {
