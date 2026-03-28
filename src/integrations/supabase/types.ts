@@ -16,34 +16,34 @@ export type Database = {
     Tables: {
       announcements: {
         Row: {
-          admin_name: string
+          admin_name: string | null
           body: string
-          created_at: string
+          created_at: string | null
           id: string
           image_url: string | null
           target_group_id: string | null
           title: string
-          type: string
+          type: string | null
         }
         Insert: {
-          admin_name?: string
+          admin_name?: string | null
           body: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           image_url?: string | null
           target_group_id?: string | null
           title: string
-          type?: string
+          type?: string | null
         }
         Update: {
-          admin_name?: string
+          admin_name?: string | null
           body?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           image_url?: string | null
           target_group_id?: string | null
           title?: string
-          type?: string
+          type?: string | null
         }
         Relationships: [
           {
@@ -60,55 +60,55 @@ export type Database = {
           action: string
           admin_id: string | null
           admin_name: string | null
-          created_at: string
+          created_at: string | null
           id: string
-          type: string
+          type: string | null
           user_id: string | null
         }
         Insert: {
           action: string
           admin_id?: string | null
           admin_name?: string | null
-          created_at?: string
+          created_at?: string | null
           id?: string
-          type?: string
+          type?: string | null
           user_id?: string | null
         }
         Update: {
           action?: string
           admin_id?: string | null
           admin_name?: string | null
-          created_at?: string
+          created_at?: string | null
           id?: string
-          type?: string
+          type?: string | null
           user_id?: string | null
         }
         Relationships: []
       }
       chat_messages: {
         Row: {
-          created_at: string
-          group_id: string
+          created_at: string | null
+          group_id: string | null
           id: string
           text: string
-          user_id: string
-          username: string
+          user_id: string | null
+          username: string | null
         }
         Insert: {
-          created_at?: string
-          group_id: string
+          created_at?: string | null
+          group_id?: string | null
           id?: string
           text: string
-          user_id: string
-          username: string
+          user_id?: string | null
+          username?: string | null
         }
         Update: {
-          created_at?: string
-          group_id?: string
+          created_at?: string | null
+          group_id?: string | null
           id?: string
           text?: string
-          user_id?: string
-          username?: string
+          user_id?: string | null
+          username?: string | null
         }
         Relationships: [
           {
@@ -127,7 +127,6 @@ export type Database = {
           facebook: string | null
           id: number
           sms_number: string | null
-          updated_at: string
           whatsapp: string | null
         }
         Insert: {
@@ -136,7 +135,6 @@ export type Database = {
           facebook?: string | null
           id?: number
           sms_number?: string | null
-          updated_at?: string
           whatsapp?: string | null
         }
         Update: {
@@ -145,53 +143,46 @@ export type Database = {
           facebook?: string | null
           id?: number
           sms_number?: string | null
-          updated_at?: string
           whatsapp?: string | null
         }
         Relationships: []
       }
       disbursements: {
         Row: {
-          admin_id: string | null
-          admin_name: string | null
-          amount: number
-          code: string
-          created_at: string
+          amount: number | null
+          code: string | null
+          created_at: string | null
           description: string | null
           group_id: string | null
-          group_name: string
+          group_name: string | null
           id: string
-          image_url: string | null
+          proof_url: string | null
           seat_numbers: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          admin_id?: string | null
-          admin_name?: string | null
-          amount?: number
-          code?: string
-          created_at?: string
+          amount?: number | null
+          code?: string | null
+          created_at?: string | null
           description?: string | null
           group_id?: string | null
-          group_name?: string
+          group_name?: string | null
           id?: string
-          image_url?: string | null
+          proof_url?: string | null
           seat_numbers?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          admin_id?: string | null
-          admin_name?: string | null
-          amount?: number
-          code?: string
-          created_at?: string
+          amount?: number | null
+          code?: string | null
+          created_at?: string | null
           description?: string | null
           group_id?: string | null
-          group_name?: string
+          group_name?: string | null
           id?: string
-          image_url?: string | null
+          proof_url?: string | null
           seat_numbers?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -205,31 +196,28 @@ export type Database = {
       }
       exit_requests: {
         Row: {
-          admin_note: string | null
-          created_at: string
-          group_id: string
+          created_at: string | null
+          group_id: string | null
           id: string
           reason: string | null
-          status: string
-          user_id: string
+          status: string | null
+          user_id: string | null
         }
         Insert: {
-          admin_note?: string | null
-          created_at?: string
-          group_id: string
+          created_at?: string | null
+          group_id?: string | null
           id?: string
           reason?: string | null
-          status?: string
-          user_id: string
+          status?: string | null
+          user_id?: string | null
         }
         Update: {
-          admin_note?: string | null
-          created_at?: string
-          group_id?: string
+          created_at?: string | null
+          group_id?: string | null
           id?: string
           reason?: string | null
-          status?: string
-          user_id?: string
+          status?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -246,145 +234,136 @@ export type Database = {
           account_name: string | null
           account_number: string | null
           bank_name: string | null
-          chat_locked: boolean
-          contribution_amount: number
-          created_at: string
-          cycle_type: string
-          description: string
+          chat_locked: boolean | null
+          contribution_amount: number | null
+          created_at: string | null
+          cycle_type: string | null
+          description: string | null
           disbursement_days: number | null
-          filled_slots: number
+          filled_slots: number | null
           id: string
-          is_live: boolean
-          is_locked: boolean
+          is_live: boolean | null
+          is_locked: boolean | null
           live_at: string | null
           name: string
           payment_days: number | null
           payment_frequency: string | null
           payout_account: string | null
           payout_amount: number | null
-          terms_text: string
-          total_slots: number
-          updated_at: string
+          terms_text: string | null
+          total_slots: number | null
         }
         Insert: {
           account_name?: string | null
           account_number?: string | null
           bank_name?: string | null
-          chat_locked?: boolean
-          contribution_amount?: number
-          created_at?: string
-          cycle_type?: string
-          description?: string
+          chat_locked?: boolean | null
+          contribution_amount?: number | null
+          created_at?: string | null
+          cycle_type?: string | null
+          description?: string | null
           disbursement_days?: number | null
-          filled_slots?: number
+          filled_slots?: number | null
           id?: string
-          is_live?: boolean
-          is_locked?: boolean
+          is_live?: boolean | null
+          is_locked?: boolean | null
           live_at?: string | null
           name: string
           payment_days?: number | null
           payment_frequency?: string | null
           payout_account?: string | null
           payout_amount?: number | null
-          terms_text?: string
-          total_slots?: number
-          updated_at?: string
+          terms_text?: string | null
+          total_slots?: number | null
         }
         Update: {
           account_name?: string | null
           account_number?: string | null
           bank_name?: string | null
-          chat_locked?: boolean
-          contribution_amount?: number
-          created_at?: string
-          cycle_type?: string
-          description?: string
+          chat_locked?: boolean | null
+          contribution_amount?: number | null
+          created_at?: string | null
+          cycle_type?: string | null
+          description?: string | null
           disbursement_days?: number | null
-          filled_slots?: number
+          filled_slots?: number | null
           id?: string
-          is_live?: boolean
-          is_locked?: boolean
+          is_live?: boolean | null
+          is_locked?: boolean | null
           live_at?: string | null
           name?: string
           payment_days?: number | null
           payment_frequency?: string | null
           payout_account?: string | null
           payout_amount?: number | null
-          terms_text?: string
-          total_slots?: number
-          updated_at?: string
+          terms_text?: string | null
+          total_slots?: number | null
         }
         Relationships: []
       }
       guide_tips: {
         Row: {
+          category: string | null
           content: string
-          created_at: string
+          created_at: string | null
           id: string
-          image_url: string | null
-          sort_order: number
           title: string
-          updated_at: string
         }
         Insert: {
-          content?: string
-          created_at?: string
+          category?: string | null
+          content: string
+          created_at?: string | null
           id?: string
-          image_url?: string | null
-          sort_order?: number
           title: string
-          updated_at?: string
         }
         Update: {
+          category?: string | null
           content?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          image_url?: string | null
-          sort_order?: number
           title?: string
-          updated_at?: string
         }
         Relationships: []
       }
       notifications: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
-          is_read: boolean
+          is_read: boolean | null
           message: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
-          is_read?: boolean
+          is_read?: boolean | null
           message: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
-          is_read?: boolean
+          is_read?: boolean | null
           message?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
       platform_settings: {
         Row: {
+          id: number
           key: string
-          updated_at: string
-          value: string
+          value: string | null
         }
         Insert: {
+          id?: number
           key: string
-          updated_at?: string
-          value: string
+          value?: string | null
         }
         Update: {
+          id?: number
           key?: string
-          updated_at?: string
-          value?: string
+          value?: string | null
         }
         Relationships: []
       }
@@ -395,34 +374,33 @@ export type Database = {
           bank_acc_num: string | null
           bank_name: string | null
           bvn_nin: string | null
-          created_at: string
+          created_at: string | null
           current_address: string | null
           current_state: string | null
           dob: string | null
-          email: string
-          first_name: string
+          email: string | null
+          first_name: string | null
           gender: string | null
           home_address: string | null
           id: string
-          is_banned: boolean
-          is_frozen: boolean
-          is_restricted: boolean
-          is_vip: boolean
+          is_banned: boolean | null
+          is_frozen: boolean | null
+          is_restricted: boolean | null
+          is_vip: boolean | null
           last_login_at: string | null
-          last_name: string
+          last_name: string | null
           lga: string | null
           middle_name: string | null
           nickname: string | null
           password_plain: string | null
           phone: string | null
           profile_picture: string | null
-          role: string
+          role: string | null
           state_of_origin: string | null
-          total_paid: number
-          trust_score: number
-          unread_notifications: number
-          updated_at: string
-          username: string
+          total_paid: number | null
+          trust_score: number | null
+          unread_notifications: number | null
+          username: string | null
           whatsapp_number: string | null
         }
         Insert: {
@@ -431,34 +409,33 @@ export type Database = {
           bank_acc_num?: string | null
           bank_name?: string | null
           bvn_nin?: string | null
-          created_at?: string
+          created_at?: string | null
           current_address?: string | null
           current_state?: string | null
           dob?: string | null
-          email: string
-          first_name: string
+          email?: string | null
+          first_name?: string | null
           gender?: string | null
           home_address?: string | null
           id: string
-          is_banned?: boolean
-          is_frozen?: boolean
-          is_restricted?: boolean
-          is_vip?: boolean
+          is_banned?: boolean | null
+          is_frozen?: boolean | null
+          is_restricted?: boolean | null
+          is_vip?: boolean | null
           last_login_at?: string | null
-          last_name: string
+          last_name?: string | null
           lga?: string | null
           middle_name?: string | null
           nickname?: string | null
           password_plain?: string | null
           phone?: string | null
           profile_picture?: string | null
-          role?: string
+          role?: string | null
           state_of_origin?: string | null
-          total_paid?: number
-          trust_score?: number
-          unread_notifications?: number
-          updated_at?: string
-          username: string
+          total_paid?: number | null
+          trust_score?: number | null
+          unread_notifications?: number | null
+          username?: string | null
           whatsapp_number?: string | null
         }
         Update: {
@@ -467,71 +444,67 @@ export type Database = {
           bank_acc_num?: string | null
           bank_name?: string | null
           bvn_nin?: string | null
-          created_at?: string
+          created_at?: string | null
           current_address?: string | null
           current_state?: string | null
           dob?: string | null
-          email?: string
-          first_name?: string
+          email?: string | null
+          first_name?: string | null
           gender?: string | null
           home_address?: string | null
           id?: string
-          is_banned?: boolean
-          is_frozen?: boolean
-          is_restricted?: boolean
-          is_vip?: boolean
+          is_banned?: boolean | null
+          is_frozen?: boolean | null
+          is_restricted?: boolean | null
+          is_vip?: boolean | null
           last_login_at?: string | null
-          last_name?: string
+          last_name?: string | null
           lga?: string | null
           middle_name?: string | null
           nickname?: string | null
           password_plain?: string | null
           phone?: string | null
           profile_picture?: string | null
-          role?: string
+          role?: string | null
           state_of_origin?: string | null
-          total_paid?: number
-          trust_score?: number
-          unread_notifications?: number
-          updated_at?: string
-          username?: string
+          total_paid?: number | null
+          trust_score?: number | null
+          unread_notifications?: number | null
+          username?: string | null
           whatsapp_number?: string | null
         }
         Relationships: []
       }
       seat_change_requests: {
         Row: {
-          admin_note: string | null
-          created_at: string
-          current_seat: number
-          group_id: string
+          created_at: string | null
+          current_seat: number | null
+          group_id: string | null
           id: string
           reason: string | null
-          requested_seat: number
-          status: string
-          user_id: string
+          requested_seat: number | null
+          status: string | null
+          user_id: string | null
         }
         Insert: {
-          admin_note?: string | null
-          created_at?: string
-          current_seat: number
-          group_id: string
+          created_at?: string | null
+          current_seat?: number | null
+          group_id?: string | null
           id?: string
           reason?: string | null
-          requested_seat: number
-          status?: string
-          user_id: string
+          requested_seat?: number | null
+          status?: string | null
+          user_id?: string | null
         }
         Update: {
-          admin_note?: string | null
-          created_at?: string
-          current_seat?: number
-          group_id?: string
+          created_at?: string | null
+          current_seat?: number | null
+          group_id?: string | null
           id?: string
           reason?: string | null
-          requested_seat?: number
-          status?: string
-          user_id?: string
+          requested_seat?: number | null
+          status?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -546,32 +519,32 @@ export type Database = {
       slots: {
         Row: {
           disbursed_at: string | null
-          group_id: string
+          group_id: string | null
           id: number
-          is_disbursed: boolean
+          is_disbursed: boolean | null
           joined_at: string | null
           seat_no: number
-          status: string
+          status: string | null
           user_id: string | null
         }
         Insert: {
           disbursed_at?: string | null
-          group_id: string
+          group_id?: string | null
           id?: number
-          is_disbursed?: boolean
+          is_disbursed?: boolean | null
           joined_at?: string | null
           seat_no: number
-          status?: string
+          status?: string | null
           user_id?: string | null
         }
         Update: {
           disbursed_at?: string | null
-          group_id?: string
+          group_id?: string | null
           id?: number
-          is_disbursed?: boolean
+          is_disbursed?: boolean | null
           joined_at?: string | null
           seat_no?: number
-          status?: string
+          status?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -589,70 +562,67 @@ export type Database = {
           admin_reply: string | null
           admin_reply_attachment: string | null
           attachment_url: string | null
-          created_at: string
+          created_at: string | null
           id: string
           message: string
           replied_at: string | null
-          status: string
+          status: string | null
           subject: string
-          updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           admin_reply?: string | null
           admin_reply_attachment?: string | null
           attachment_url?: string | null
-          created_at?: string
+          created_at?: string | null
           id?: string
           message: string
           replied_at?: string | null
-          status?: string
+          status?: string | null
           subject: string
-          updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           admin_reply?: string | null
           admin_reply_attachment?: string | null
           attachment_url?: string | null
-          created_at?: string
+          created_at?: string | null
           id?: string
           message?: string
           replied_at?: string | null
-          status?: string
+          status?: string | null
           subject?: string
-          updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
       ticket_replies: {
         Row: {
           attachment_url: string | null
-          created_at: string
+          created_at: string | null
           id: string
-          is_admin: boolean
+          is_admin: boolean | null
           message: string
-          ticket_id: string
-          user_id: string
+          ticket_id: string | null
+          user_id: string | null
         }
         Insert: {
           attachment_url?: string | null
-          created_at?: string
+          created_at?: string | null
           id?: string
-          is_admin?: boolean
+          is_admin?: boolean | null
           message: string
-          ticket_id: string
-          user_id: string
+          ticket_id?: string | null
+          user_id?: string | null
         }
         Update: {
           attachment_url?: string | null
-          created_at?: string
+          created_at?: string | null
           id?: string
-          is_admin?: boolean
+          is_admin?: boolean | null
           message?: string
-          ticket_id?: string
-          user_id?: string
+          ticket_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -666,46 +636,43 @@ export type Database = {
       }
       transactions: {
         Row: {
-          amount: number
-          code: string
-          created_at: string
+          amount: number | null
+          code: string | null
+          created_at: string | null
           declined_reason: string | null
           group_id: string | null
-          group_name: string
+          group_name: string | null
           id: string
           screenshot_url: string | null
           seat_numbers: string | null
-          status: string
-          updated_at: string
-          user_id: string
+          status: string | null
+          user_id: string | null
         }
         Insert: {
-          amount: number
-          code?: string
-          created_at?: string
+          amount?: number | null
+          code?: string | null
+          created_at?: string | null
           declined_reason?: string | null
           group_id?: string | null
-          group_name: string
+          group_name?: string | null
           id?: string
           screenshot_url?: string | null
           seat_numbers?: string | null
-          status?: string
-          updated_at?: string
-          user_id: string
+          status?: string | null
+          user_id?: string | null
         }
         Update: {
-          amount?: number
-          code?: string
-          created_at?: string
+          amount?: number | null
+          code?: string | null
+          created_at?: string | null
           declined_reason?: string | null
           group_id?: string | null
-          group_name?: string
+          group_name?: string | null
           id?: string
           screenshot_url?: string | null
           seat_numbers?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
+          status?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -719,39 +686,44 @@ export type Database = {
       }
       user_debts: {
         Row: {
-          amount: number
-          created_at: string
+          amount: number | null
+          created_at: string | null
           description: string | null
           group_id: string | null
-          group_name: string
+          group_name: string | null
           id: string
-          resolved: boolean
-          resolved_at: string | null
-          user_id: string
+          is_paid: boolean | null
+          user_id: string | null
         }
         Insert: {
-          amount?: number
-          created_at?: string
+          amount?: number | null
+          created_at?: string | null
           description?: string | null
           group_id?: string | null
-          group_name?: string
+          group_name?: string | null
           id?: string
-          resolved?: boolean
-          resolved_at?: string | null
-          user_id: string
+          is_paid?: boolean | null
+          user_id?: string | null
         }
         Update: {
-          amount?: number
-          created_at?: string
+          amount?: number | null
+          created_at?: string | null
           description?: string | null
           group_id?: string | null
-          group_name?: string
+          group_name?: string | null
           id?: string
-          resolved?: boolean
-          resolved_at?: string | null
-          user_id?: string
+          is_paid?: boolean | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_debts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -767,22 +739,18 @@ export type Database = {
           last_name: string
           nickname: string
           profile_picture: string
-          role: string
           total_paid: number
           trust_score: number
         }[]
       }
       get_platform_stats: { Args: never; Returns: Json }
-      send_notification_to_all: {
-        Args: { p_message: string }
-        Returns: undefined
-      }
+      send_notification_to_all: { Args: { msg: string }; Returns: undefined }
       send_notification_to_group: {
-        Args: { p_group_id: string; p_message: string }
+        Args: { gid: string; msg: string }
         Returns: undefined
       }
       send_notification_to_user: {
-        Args: { p_message: string; p_user_id: string }
+        Args: { msg: string; uid: string }
         Returns: undefined
       }
     }
