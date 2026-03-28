@@ -190,9 +190,10 @@ export default function Admin() {
     await refreshSupportTickets(); setShowSupportReply(null); setSupportReplyText(""); setSupportReplyFile(null);
   };
 
-  const toggleTicketStatus = async (ticketId: string, currentStatus: string) => {
-    const newStatus = currentStatus === "closed" ? "open" : "closed";
+  const updateTicketStatus = async (ticketId: string, newStatus: string) => {
     await supabase.from("support_tickets").update({ status: newStatus }).eq("id", ticketId);
+    const ticket = supportTickets.find(t => t.id === ticketId);
+    if (ticket) await supabase.rpc("send_notification_to_user", { uid: ticket.userId, msg: `Your support ticket "${ticket.subject}" has been marked as: ${newStatus.toUpperCase()}` });
     await refreshSupportTickets();
   };
 
