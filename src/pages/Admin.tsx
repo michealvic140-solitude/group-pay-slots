@@ -831,7 +831,7 @@ export default function Admin() {
                     <p className="text-muted-foreground text-xs mb-2 line-clamp-2">{t.message}</p>
                     <div className="flex items-center justify-between">
                       <p className="text-muted-foreground/40 text-[9px]">{new Date(t.createdAt).toLocaleString()}</p>
-                      <Btn variant="gold" size="xs" onClick={e=>{e.stopPropagation();setOpenTicketId(t.id);loadTicketReplies(t.id)}}><MessageSquare size={9}/>Open Thread</Btn>
+                      <Btn variant="gold" size="xs" onClick={()=>{setOpenTicketId(t.id);loadTicketReplies(t.id)}}><MessageSquare size={9}/>Open Thread</Btn>
                     </div>
                   </div>
                 ))}
