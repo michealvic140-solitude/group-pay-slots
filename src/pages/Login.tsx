@@ -28,7 +28,7 @@ export default function Login() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { isLoggedIn, currentUser } = useApp();
+  const { isLoggedIn, currentUser, maintenanceMode } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state as { redirect?: string })?.redirect || null;
@@ -46,28 +46,59 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      // Try email first, then username lookup
+      // Check maintenance mode first
+      if (maintenanceMode) {
+        // Check if the user is admin before blocking
+        let loginEmail = identifier;
+        if (!identifier.includes("@")) {
+          const { data: profile } = await supabase.from("profiles").select("email, role").eq("username", identifier).single();
+          if (!profile) { setError("Invalid credentials."); setLoading(false); return; }
+          if ((profile as Record<string, unknown>).role !== "admin") {
+            setError("The platform is currently under maintenance. Please try again later.");
+            setLoading(false);
+            return;
+          }
+          loginEmail = (profile as Record<string, unknown>).email as string;
+        } else {
+          const { data: profile } = await supabase.from("profiles").select("role").eq("email", identifier).single();
+          if (profile && (profile as Record<string, unknown>).role !== "admin") {
+            setError("The platform is currently under maintenance. Please try again later.");
+            setLoading(false);
+            return;
+          }
+        }
+        // Proceed with admin login
+        const { data, error: authErr } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
+        if (authErr) { setError("Invalid credentials."); setLoading(false); return; }
+        if (data.user) {
+          navigate("/admin", { replace: true });
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Normal login flow
       let loginEmail = identifier;
       if (!identifier.includes("@")) {
-        // Look up email by username
         const { data: profile } = await supabase
           .from("profiles")
-          .select("email, is_banned, is_frozen")
+          .select("email, is_banned, is_frozen, is_restricted")
           .eq("username", identifier)
           .single();
         if (!profile) { setError("Invalid credentials. Please try again."); setLoading(false); return; }
-        if (profile.is_banned) { navigate("/banned"); return; }
-        if (profile.is_frozen) { setError("Your account is temporarily frozen. Contact support."); setLoading(false); return; }
+        if ((profile as Record<string, unknown>).is_banned) { navigate("/banned"); return; }
+        if ((profile as Record<string, unknown>).is_frozen) { setError("Your account is temporarily frozen. Contact support."); setLoading(false); return; }
         loginEmail = (profile as Record<string, unknown>).email as string;
       }
       const { data, error: authErr } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
       if (authErr) { setError("Invalid credentials. Please try again."); setLoading(false); return; }
       if (data.user) {
-        // Check ban/freeze
         const { data: profile } = await supabase.from("profiles").select("is_banned, is_frozen, role").eq("id", data.user.id).single();
         if ((profile as Record<string, unknown>)?.is_banned) { await supabase.auth.signOut(); navigate("/banned"); return; }
         if ((profile as Record<string, unknown>)?.is_frozen) { await supabase.auth.signOut(); setError("Your account is temporarily frozen. Contact support."); setLoading(false); return; }
         const role = (profile as Record<string, unknown>)?.role as string;
+        // Log audit
+        await supabase.from("audit_logs").insert({ user_id: data.user.id, action: "Logged in", type: "auth" });
         if (redirectTo) navigate(redirectTo, { replace: true });
         else if (role === "admin" || role === "moderator") navigate("/admin", { replace: true });
         else navigate("/dashboard", { replace: true });
@@ -95,6 +126,11 @@ export default function Login() {
             <img src={rtaspLogo} alt="RTRASP" className="w-8 h-8 rounded-full object-contain" />
             <span className="gold-gradient-text font-cinzel font-bold text-sm tracking-widest">RTRASP</span>
           </div>
+          {maintenanceMode && (
+            <div className="mb-4 px-3 py-2 rounded-lg bg-amber-900/20 border border-amber-600/30 text-amber-400 text-xs">
+              ⚠️ Platform is under maintenance. Only admins can sign in.
+            </div>
+          )}
           {message && <div className="mb-4 px-3 py-2 rounded-lg bg-amber-900/20 border border-amber-600/30 text-amber-400 text-xs">{message}</div>}
           <div className="text-center mb-8 mt-4">
             <h1 className="font-cinzel font-black text-2xl md:text-3xl leading-tight mb-1"
@@ -129,7 +165,7 @@ export default function Login() {
             </button>
           </form>
           <div className="flex flex-col items-center gap-3 mt-5 text-xs text-muted-foreground">
-            <Link to="/register" className="hover:text-gold transition-colors">New here? <span className="text-gold font-semibold">Create Account</span></Link>
+            {!maintenanceMode && <Link to="/register" className="hover:text-gold transition-colors">New here? <span className="text-gold font-semibold">Create Account</span></Link>}
             <Link to="/forgot-password" className="hover:text-gold transition-colors text-muted-foreground/70">Forgot your password? <span className="text-gold/80 font-semibold">Reset it</span></Link>
           </div>
         </div>

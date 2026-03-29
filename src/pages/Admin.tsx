@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useApp } from "@/context/AppContext";
 import { Navigate } from "react-router-dom";
-import { BarChart3, Users, Shield, FileText, Bell, Ban, Star, Lock, Search, CheckCircle, X, Crown, Eye, EyeOff, Edit, Plus, Megaphone, LogOut, Trash2, Phone, Key, ToggleLeft, ToggleRight, Upload, Reply, Settings, TrendingUp, ListChecks, DollarSign, AlertTriangle, RefreshCw } from "lucide-react";
+import { BarChart3, Users, Shield, FileText, Bell, Ban, Star, Lock, Search, CheckCircle, X, Crown, Eye, EyeOff, Edit, Plus, Megaphone, LogOut, Trash2, Phone, Key, ToggleLeft, ToggleRight, Upload, Reply, Settings, TrendingUp, ListChecks, DollarSign, AlertTriangle, RefreshCw, Send, MessageSquare } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import { supabase } from "@/integrations/supabase/client";
 import type { Announcement } from "@/context/AppContext";
@@ -26,6 +26,8 @@ const Modal = ({ title, onClose, children }: { title:string; onClose:()=>void; c
     </div>
   </div>
 );
+
+interface TicketReply { id: string; message: string; is_admin: boolean; attachment_url?: string; created_at: string; user_id: string; }
 
 export default function Admin() {
   const { currentUser, isLoggedIn, groups, refreshGroups, announcements, setAnnouncements, refreshAnnouncements, supportTickets, refreshSupportTickets, contactInfo, setContactInfo, maintenanceMode, setMaintenanceMode } = useApp();
@@ -54,6 +56,18 @@ export default function Admin() {
   const [termContent, setTermContent] = useState(""); const [termSaving, setTermSaving] = useState(false);
   const [editContact, setEditContact] = useState({ ...contactInfo });
 
+  // Ban reason modal
+  const [showBanModal, setShowBanModal] = useState<string|null>(null);
+  const [banReason, setBanReason] = useState("");
+
+  // Restrict reason modal
+  const [showRestrictModal, setShowRestrictModal] = useState<string|null>(null);
+  const [restrictReason, setRestrictReason] = useState("");
+
+  // Add seats modal
+  const [showAddSeatsModal, setShowAddSeatsModal] = useState<string|null>(null);
+  const [addSeatsCount, setAddSeatsCount] = useState("");
+
   // Members tab
   const [memberGroupId, setMemberGroupId] = useState("");
   const [groupMembers, setGroupMembers] = useState<Record<string,unknown>[]>([]);
@@ -67,14 +81,25 @@ export default function Admin() {
   // Debts tab
   const [debts, setDebts] = useState<Record<string,unknown>[]>([]);
 
-  const loadData = async () => {
+  // Support ticket thread
+  const [ticketReplies, setTicketReplies] = useState<TicketReply[]>([]);
+  const [openTicketId, setOpenTicketId] = useState<string|null>(null);
+  const ticketChatRef = useRef<HTMLDivElement>(null);
+
+  // User profile view
+  const [showUserProfile, setShowUserProfile] = useState<string|null>(null);
+  const [userProfileData, setUserProfileData] = useState<Record<string,unknown>|null>(null);
+  const [userTxHistory, setUserTxHistory] = useState<Record<string,unknown>[]>([]);
+  const [userAuditLogs, setUserAuditLogs] = useState<Record<string,unknown>[]>([]);
+
+  const loadData = useCallback(async () => {
     const [statsData, usersData, paymentsData, exitData, seatData, auditData, disbData, debtsData] = await Promise.all([
       supabase.rpc("get_platform_stats"),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("transactions").select("*, profiles(username, first_name, last_name, nickname)").order("created_at", { ascending: false }),
       supabase.from("exit_requests").select("*, profiles(username, nickname), groups(name)").order("created_at", { ascending: false }),
       supabase.from("seat_change_requests").select("*, profiles(username, nickname), groups(name)").order("created_at", { ascending: false }),
-      supabase.from("audit_logs").select("*, profiles(username)").order("created_at", { ascending: false }).limit(100),
+      supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(200),
       supabase.from("disbursements").select("*, profiles(username, first_name, last_name)").order("created_at", { ascending: false }),
       supabase.from("user_debts").select("*, profiles(username, first_name, last_name)").order("created_at", { ascending: false }),
     ]);
@@ -88,7 +113,7 @@ export default function Admin() {
     if (debtsData.data) setDebts(debtsData.data as typeof debts);
     const { data: termsData } = await supabase.from("platform_settings").select("value").eq("key","terms_and_conditions").single();
     if (termsData) setTermContent((termsData as Record<string,unknown>).value as string);
-  };
+  }, []);
 
   const loadGroupMembers = async (groupId: string) => {
     if (!groupId) { setGroupMembers([]); setMemberStats({ totalUsers: 0, totalSeats: 0 }); return; }
@@ -101,8 +126,36 @@ export default function Admin() {
     }
   };
 
-  useEffect(() => { loadData(); refreshAnnouncements(); refreshSupportTickets(); }, []);
+  const loadTicketReplies = useCallback(async (ticketId: string) => {
+    const { data } = await supabase.from("ticket_replies").select("*").eq("ticket_id", ticketId).order("created_at");
+    if (data) setTicketReplies(data as TicketReply[]);
+    setTimeout(() => ticketChatRef.current?.scrollTo({ top: ticketChatRef.current.scrollHeight, behavior: "smooth" }), 100);
+  }, []);
+
+  const loadUserProfile = async (userId: string) => {
+    const [profileData, txData, auditData2] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", userId).single(),
+      supabase.from("transactions").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
+      supabase.from("audit_logs").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
+    ]);
+    if (profileData.data) setUserProfileData(profileData.data as Record<string,unknown>);
+    if (txData.data) setUserTxHistory(txData.data as Record<string,unknown>[]);
+    if (auditData2.data) setUserAuditLogs(auditData2.data as Record<string,unknown>[]);
+  };
+
+  useEffect(() => { loadData(); refreshAnnouncements(); refreshSupportTickets(); }, [loadData, refreshAnnouncements, refreshSupportTickets]);
   useEffect(() => { if (memberGroupId) loadGroupMembers(memberGroupId); }, [memberGroupId]);
+
+  // Realtime ticket replies
+  useEffect(() => {
+    if (!openTicketId) return;
+    const channel = supabase.channel(`ticket-${openTicketId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ticket_replies', filter: `ticket_id=eq.${openTicketId}` }, (payload) => {
+        setTicketReplies(prev => [...prev, payload.new as TicketReply]);
+        setTimeout(() => ticketChatRef.current?.scrollTo({ top: ticketChatRef.current.scrollHeight, behavior: "smooth" }), 50);
+      }).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [openTicketId]);
 
   if (!isLoggedIn || (currentUser?.role !== "admin" && currentUser?.role !== "moderator")) return <Navigate to="/" replace />;
 
@@ -110,6 +163,7 @@ export default function Admin() {
     const val = !maintenanceMode;
     await supabase.from("platform_settings").update({ value: String(val) }).eq("key","maintenance_mode");
     setMaintenanceMode(val);
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, action: val ? "Enabled maintenance mode" : "Disabled maintenance mode", type: "system" });
   };
 
   const createGroup = async () => {
@@ -117,20 +171,39 @@ export default function Admin() {
     const payload = { name:gName, description:gDesc, contribution_amount:parseFloat(gAmt), cycle_type:gCycle, total_slots:parseInt(gSlots), bank_name:gBank, account_number:gAccNum, account_name:gAccName, payout_amount:parseFloat(gPayoutAmt)||0, payment_frequency:gPayFreq, payment_days:parseInt(gPayDays)||1, disbursement_days:parseInt(gDisbDays)||30 };
     if (editingGroup) {
       await supabase.from("groups").update(payload).eq("id",editingGroup);
+      await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, action: `Updated group: ${gName}`, type: "group" });
     } else {
       const { data } = await supabase.from("groups").insert(payload).select().single();
       if (data) {
-        const slots = Array.from({ length: parseInt(gSlots) }, (_, i) => ({ group_id: (data as Record<string,unknown>).id as string, seat_no: i+1, status:"available" }));
+        const numSlots = parseInt(gSlots) || 100;
+        const slots = Array.from({ length: numSlots }, (_, i) => ({ group_id: (data as Record<string,unknown>).id as string, seat_no: i+1, status:"available" }));
         await supabase.from("slots").insert(slots);
         await supabase.rpc("send_notification_to_all", { msg: `New group available: ${gName}! Join now and start saving.` });
+        await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, action: `Created group: ${gName} with ${numSlots} seats`, type: "group" });
       }
     }
     await refreshGroups(); setShowCreateGroup(false); setEditingGroup(null); setGName(""); setGDesc(""); setGAmt(""); setGSlots("100"); setGBank(""); setGAccNum(""); setGAccName(""); setGPayoutAmt(""); setGPayFreq("daily"); setGPayDays("1"); setGDisbDays("30");
   };
 
+  const addSeatsToGroup = async (groupId: string) => {
+    const count = parseInt(addSeatsCount);
+    if (!count || count < 1) return;
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return;
+    const currentMax = group.totalSlots;
+    const newSlots = Array.from({ length: count }, (_, i) => ({ group_id: groupId, seat_no: currentMax + i + 1, status: "available" }));
+    await supabase.from("slots").insert(newSlots);
+    await supabase.from("groups").update({ total_slots: currentMax + count }).eq("id", groupId);
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, action: `Added ${count} seats to group: ${group.name}`, type: "group" });
+    await refreshGroups();
+    setShowAddSeatsModal(null); setAddSeatsCount("");
+    alert(`${count} seats added!`);
+  };
+
   const toggleGroupLive = async (groupId: string, isLive: boolean) => {
     await supabase.from("groups").update({ is_live: !isLive, live_at: !isLive ? new Date().toISOString() : null }).eq("id", groupId);
-    if (!isLive) await supabase.rpc("send_notification_to_group", { gid: groupId, msg: `Your group is now LIVE! Daily timer has started.` });
+    if (!isLive) await supabase.rpc("send_notification_to_group", { gid: groupId, msg: `Your group is now LIVE! Payment timer has started.` });
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, action: `${!isLive ? "Activated" : "Deactivated"} group`, type: "group" });
     await refreshGroups(); await loadData();
   };
 
@@ -160,16 +233,57 @@ export default function Admin() {
     setNotifMsg(""); setNotifUserId(""); alert("Notification sent!");
   };
 
+  const banUser = async (userId: string) => {
+    if (!banReason.trim()) { alert("Please provide a ban reason."); return; }
+    await supabase.from("profiles").update({ is_banned: true }).eq("id", userId);
+    await supabase.rpc("send_notification_to_user", { uid: userId, msg: `Your account has been banned. Reason: ${banReason}. Contact admin to appeal.` });
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, user_id: userId, action: `Banned user. Reason: ${banReason}`, type: "moderation" });
+    setShowBanModal(null); setBanReason(""); await loadData();
+  };
+
+  const restrictUser = async (userId: string) => {
+    if (!restrictReason.trim()) { alert("Please provide a restriction reason."); return; }
+    await supabase.from("profiles").update({ is_restricted: true, is_frozen: true }).eq("id", userId);
+    await supabase.rpc("send_notification_to_user", { uid: userId, msg: `Your account has been restricted/frozen. Reason: ${restrictReason}. You cannot view or join groups. Contact admin.` });
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, user_id: userId, action: `Restricted/Froze user. Reason: ${restrictReason}`, type: "moderation" });
+    setShowRestrictModal(null); setRestrictReason(""); await loadData();
+  };
+
   const updateUserFlag = async (userId: string, field: string, value: boolean) => {
     await supabase.from("profiles").update({ [field]: value }).eq("id", userId);
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, user_id: userId, action: `Set ${field} = ${value}`, type: "moderation" });
     await loadData();
-    if (field === "is_banned" && value) await supabase.rpc("send_notification_to_user", { uid: userId, msg: "Your account has been banned. Contact admin to appeal." });
     if (field === "is_banned" && !value) await supabase.rpc("send_notification_to_user", { uid: userId, msg: "Your account has been unbanned. Welcome back!" });
+    if (field === "is_restricted" && !value) await supabase.rpc("send_notification_to_user", { uid: userId, msg: "Your account restriction has been lifted." });
+    if (field === "is_frozen" && !value) await supabase.rpc("send_notification_to_user", { uid: userId, msg: "Your account has been unfrozen." });
   };
 
   const saveUserEdit = async () => {
     if (!showUserEdit) return;
-    await supabase.from("profiles").update({ trust_score: editedUser.trustScore ? parseInt(editedUser.trustScore) : undefined, role: editedUser.role || undefined }).eq("id", showUserEdit);
+    const updates: Record<string, unknown> = {};
+    if (editedUser.trustScore) updates.trust_score = parseInt(editedUser.trustScore);
+    if (editedUser.role) updates.role = editedUser.role;
+    if (editedUser.firstName) updates.first_name = editedUser.firstName;
+    if (editedUser.middleName !== undefined) updates.middle_name = editedUser.middleName || null;
+    if (editedUser.lastName) updates.last_name = editedUser.lastName;
+    if (editedUser.nickname !== undefined) updates.nickname = editedUser.nickname || null;
+    if (editedUser.dob !== undefined) updates.dob = editedUser.dob || null;
+    if (editedUser.gender !== undefined) updates.gender = editedUser.gender || null;
+    if (editedUser.email) updates.email = editedUser.email;
+    if (editedUser.phone !== undefined) updates.phone = editedUser.phone || null;
+    if (editedUser.whatsappNumber !== undefined) updates.whatsapp_number = editedUser.whatsappNumber || null;
+    if (editedUser.homeAddress !== undefined) updates.home_address = editedUser.homeAddress || null;
+    if (editedUser.currentAddress !== undefined) updates.current_address = editedUser.currentAddress || null;
+    if (editedUser.stateOfOrigin !== undefined) updates.state_of_origin = editedUser.stateOfOrigin || null;
+    if (editedUser.currentState !== undefined) updates.current_state = editedUser.currentState || null;
+    if (editedUser.lga !== undefined) updates.lga = editedUser.lga || null;
+    if (editedUser.bvnNin !== undefined) updates.bvn_nin = editedUser.bvnNin || null;
+    if (editedUser.bankAccName !== undefined) updates.bank_acc_name = editedUser.bankAccName || null;
+    if (editedUser.bankName !== undefined) updates.bank_name = editedUser.bankName || null;
+    if (editedUser.bankAccNum !== undefined) updates.bank_acc_num = editedUser.bankAccNum || null;
+
+    await supabase.from("profiles").update(updates).eq("id", showUserEdit);
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, user_id: showUserEdit, action: `Edited user profile`, type: "moderation" });
     if (editedUser.role === "admin") await supabase.rpc("send_notification_to_user", { uid: showUserEdit, msg: "You have been granted Admin role on the platform." });
     setShowUserEdit(null); await loadData();
   };
@@ -183,25 +297,55 @@ export default function Admin() {
       if (up) { const { data: u } = supabase.storage.from("support-attachments").getPublicUrl(up.path); attachmentUrl = u.publicUrl; }
     }
     const ticket = supportTickets.find(t => t.id === ticketId);
-    // Insert as ticket reply
     await supabase.from("ticket_replies").insert({ ticket_id: ticketId, user_id: currentUser!.id, message: supportReplyText, attachment_url: attachmentUrl||null, is_admin: true });
     await supabase.from("support_tickets").update({ admin_reply: supportReplyText, admin_reply_attachment: attachmentUrl||null, status: "replied", replied_at: new Date().toISOString() }).eq("id", ticketId);
     if (ticket) await supabase.rpc("send_notification_to_user", { uid: ticket.userId, msg: `Admin replied to your support ticket: "${ticket.subject}"` });
-    await refreshSupportTickets(); setShowSupportReply(null); setSupportReplyText(""); setSupportReplyFile(null);
+    await refreshSupportTickets(); setSupportReplyText(""); setSupportReplyFile(null);
+    if (openTicketId === ticketId) loadTicketReplies(ticketId);
   };
 
   const updateTicketStatus = async (ticketId: string, newStatus: string) => {
     await supabase.from("support_tickets").update({ status: newStatus }).eq("id", ticketId);
     const ticket = supportTickets.find(t => t.id === ticketId);
     if (ticket) await supabase.rpc("send_notification_to_user", { uid: ticket.userId, msg: `Your support ticket "${ticket.subject}" has been marked as: ${newStatus.toUpperCase()}` });
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, action: `Updated ticket "${ticket?.subject}" to ${newStatus}`, type: "support" });
     await refreshSupportTickets();
   };
 
-  const approvePayment = async (txId: string) => { await supabase.from("transactions").update({ status: "approved" }).eq("id", txId); await loadData(); };
-  const declinePayment = async (txId: string, userId: string, groupName: string) => {
+  const approvePayment = async (txId: string, userId: string, groupId: string, seatNumbers: string) => {
+    await supabase.from("transactions").update({ status: "approved" }).eq("id", txId);
+    // Mark seats as claimed
+    if (seatNumbers && groupId) {
+      const seatNums = seatNumbers.split("+").map(s => parseInt(s.replace(/\D/g, "")));
+      for (const sn of seatNums) {
+        await supabase.from("slots").update({ status: "claimed" }).eq("group_id", groupId).eq("seat_no", sn).eq("user_id", userId);
+      }
+    }
+    // Update user total_paid
+    const { data: txData } = await supabase.from("transactions").select("amount").eq("id", txId).single();
+    if (txData) {
+      const amt = Number((txData as Record<string,unknown>).amount) || 0;
+      const { data: profile } = await supabase.from("profiles").select("total_paid").eq("id", userId).single();
+      const currentPaid = Number((profile as Record<string,unknown>)?.total_paid) || 0;
+      await supabase.from("profiles").update({ total_paid: currentPaid + amt }).eq("id", userId);
+    }
+    await supabase.rpc("send_notification_to_user", { uid: userId, msg: `Your payment has been approved! Seats ${seatNumbers} are now confirmed.` });
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, user_id: userId, action: `Approved payment ${txId}`, type: "payment" });
+    await loadData();
+  };
+
+  const declinePayment = async (txId: string, userId: string, groupName: string, groupId: string, seatNumbers: string) => {
     const reason = prompt("Reason for declining (optional):");
     await supabase.from("transactions").update({ status: "declined", declined_reason: reason || null }).eq("id", txId);
-    await supabase.rpc("send_notification_to_user", { uid: userId, msg: `Your payment for ${groupName} was declined.${reason ? ` Reason: ${reason}` : ""} Please resubmit.` });
+    // Free up reserved seats
+    if (seatNumbers && groupId) {
+      const seatNums = seatNumbers.split("+").map(s => parseInt(s.replace(/\D/g, "")));
+      for (const sn of seatNums) {
+        await supabase.from("slots").update({ user_id: null, status: "available", joined_at: null }).eq("group_id", groupId).eq("seat_no", sn).eq("user_id", userId);
+      }
+    }
+    await supabase.rpc("send_notification_to_user", { uid: userId, msg: `Your payment for ${groupName} was declined.${reason ? ` Reason: ${reason}` : ""} Your seats are now available again.` });
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, user_id: userId, action: `Declined payment ${txId}. Reason: ${reason || "N/A"}`, type: "payment" });
     await loadData();
   };
 
@@ -213,6 +357,7 @@ export default function Admin() {
     if (!confirm(`Remove user from Seat S${seatNo}?`)) return;
     await supabase.from("slots").update({ user_id: null, status: "available", joined_at: null }).eq("id", slotId);
     await supabase.rpc("send_notification_to_user", { uid: userId, msg: `You have been removed from Seat S${seatNo} in ${groupName} by an admin.` });
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, user_id: userId, action: `Removed user from S${seatNo} in ${groupName}`, type: "moderation" });
     loadGroupMembers(memberGroupId);
   };
 
@@ -220,6 +365,7 @@ export default function Admin() {
     if (!confirm(`Kick this user from all seats in ${groupName}?`)) return;
     await supabase.from("slots").update({ user_id: null, status: "available", joined_at: null }).eq("group_id", groupId).eq("user_id", userId);
     await supabase.rpc("send_notification_to_user", { uid: userId, msg: `You have been removed from group ${groupName} by an admin.` });
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, user_id: userId, action: `Kicked user from ${groupName}`, type: "moderation" });
     loadGroupMembers(memberGroupId);
   };
 
@@ -233,7 +379,6 @@ export default function Admin() {
     }
     const selectedGroup = groups.find(g => g.id === disbGroupId);
     await supabase.from("disbursements").insert({ user_id: disbUserId, group_id: disbGroupId, group_name: selectedGroup?.name || "", amount: parseFloat(disbAmount), description: disbDesc || null, seat_numbers: disbSeats || null, proof_url: imageUrl || null });
-    // Mark seats as disbursed if provided
     if (disbSeats) {
       const seatNums = disbSeats.split("+").map(s => parseInt(s.replace(/\D/g,"")));
       for (const sn of seatNums) {
@@ -241,12 +386,14 @@ export default function Admin() {
       }
     }
     await supabase.rpc("send_notification_to_user", { uid: disbUserId, msg: `🎉 You have been disbursed ₦${parseFloat(disbAmount).toLocaleString()} from ${selectedGroup?.name || "a group"}! Check your bank, it may take up to 24hrs.` });
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, user_id: disbUserId, action: `Disbursed ₦${parseFloat(disbAmount).toLocaleString()} to user from ${selectedGroup?.name}`, type: "disbursement" });
     setShowDisbModal(false); setDisbUserId(""); setDisbGroupId(""); setDisbAmount(""); setDisbDesc(""); setDisbSeats(""); setDisbFile(null);
     await loadData();
   };
 
   const resolveDebt = async (debtId: string) => {
     await supabase.from("user_debts").update({ is_paid: true }).eq("id", debtId);
+    await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, action: `Resolved debt ${debtId}`, type: "debt" });
     await loadData();
   };
 
@@ -269,7 +416,7 @@ export default function Admin() {
 
   const filteredUsers = adminUsers.filter(u => {
     if (!searchQuery) return true;
-    return (u.username as string)?.toLowerCase().includes(searchQuery.toLowerCase()) || (u.email as string)?.toLowerCase().includes(searchQuery.toLowerCase());
+    return (u.username as string)?.toLowerCase().includes(searchQuery.toLowerCase()) || (u.email as string)?.toLowerCase().includes(searchQuery.toLowerCase()) || (u.first_name as string)?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   return (
@@ -341,7 +488,7 @@ export default function Admin() {
             </div>
             <div className="glass-card-static rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs"><thead><tr className="border-b border-gold/10 bg-gold/5">{["Username","Name","Email","Role","Status","Score","Password","Last Login","Actions"].map(h=><th key={h} className="px-3 py-2 text-left text-muted-foreground font-semibold uppercase text-[9px] whitespace-nowrap">{h}</th>)}</tr></thead>
+                <table className="w-full text-xs"><thead><tr className="border-b border-gold/10 bg-gold/5">{["Username","Name","Email","Role","Status","Score","Password","Actions"].map(h=><th key={h} className="px-3 py-2 text-left text-muted-foreground font-semibold uppercase text-[9px] whitespace-nowrap">{h}</th>)}</tr></thead>
                 <tbody>{filteredUsers.map((u,i)=>(
                   <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
                     <td className="px-3 py-2 text-gold font-mono">@{u.username as string}</td>
@@ -356,15 +503,29 @@ export default function Admin() {
                         <button onClick={() => setShowPasswords(p=>({...p,[u.id as string]:!p[u.id as string]}))} className="text-muted-foreground hover:text-gold">{showPasswords[u.id as string]?<EyeOff size={10}/>:<Eye size={10}/>}</button>
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-muted-foreground text-[9px]">{u.last_login_at ? new Date(u.last_login_at as string).toLocaleString() : "Never"}</td>
                     <td className="px-3 py-2">
                       <div className="flex gap-1 flex-wrap">
-                        <Btn variant="gold" size="xs" onClick={()=>{setShowUserEdit(u.id as string);setEditedUser({trustScore:String(u.trust_score),role:u.role as string})}}><Edit size={9}/>Edit</Btn>
+                        <Btn variant="gold" size="xs" onClick={()=>{
+                          setShowUserEdit(u.id as string);
+                          setEditedUser({
+                            trustScore:String(u.trust_score), role:u.role as string,
+                            firstName: u.first_name as string || "", middleName: u.middle_name as string || "",
+                            lastName: u.last_name as string || "", nickname: u.nickname as string || "",
+                            dob: u.dob as string || "", gender: u.gender as string || "",
+                            email: u.email as string || "", phone: u.phone as string || "",
+                            whatsappNumber: u.whatsapp_number as string || "",
+                            homeAddress: u.home_address as string || "", currentAddress: u.current_address as string || "",
+                            stateOfOrigin: u.state_of_origin as string || "", currentState: u.current_state as string || "",
+                            lga: u.lga as string || "", bvnNin: u.bvn_nin as string || "",
+                            bankAccName: u.bank_acc_name as string || "", bankName: u.bank_name as string || "",
+                            bankAccNum: u.bank_acc_num as string || "",
+                          });
+                        }}><Edit size={9}/>Edit</Btn>
+                        <Btn variant="blue" size="xs" onClick={async()=>{setShowUserProfile(u.id as string);await loadUserProfile(u.id as string);}}><Eye size={9}/>View</Btn>
                         <Btn variant={u.is_vip?"amber":"blue"} size="xs" onClick={()=>updateUserFlag(u.id as string,"is_vip",!u.is_vip)}><Crown size={9}/>{u.is_vip?"Rm VIP":"VIP"}</Btn>
-                        <Btn variant={u.is_banned?"green":"red"} size="xs" onClick={()=>updateUserFlag(u.id as string,"is_banned",!u.is_banned)}><Ban size={9}/>{u.is_banned?"Unban":"Ban"}</Btn>
-                        <Btn variant={u.is_frozen?"green":"blue"} size="xs" onClick={()=>updateUserFlag(u.id as string,"is_frozen",!u.is_frozen)}><Lock size={9}/>{u.is_frozen?"Unfreeze":"Freeze"}</Btn>
+                        <Btn variant={u.is_banned?"green":"red"} size="xs" onClick={()=>{if(u.is_banned){updateUserFlag(u.id as string,"is_banned",false)}else{setShowBanModal(u.id as string);setBanReason("")}}}><Ban size={9}/>{u.is_banned?"Unban":"Ban"}</Btn>
+                        <Btn variant={u.is_restricted?"green":"amber"} size="xs" onClick={()=>{if(u.is_restricted){updateUserFlag(u.id as string,"is_restricted",false);updateUserFlag(u.id as string,"is_frozen",false)}else{setShowRestrictModal(u.id as string);setRestrictReason("")}}}><Lock size={9}/>{u.is_restricted?"Unrestrict":"Restrict"}</Btn>
                         <Btn variant="amber" size="xs" onClick={async()=>{const pw=generatePassword();await supabase.from("profiles").update({password_plain:pw}).eq("id",u.id as string);alert(`New password: ${pw}`)}}><Key size={9}/>Gen Pw</Btn>
-                        <Btn variant="amber" size="xs" onClick={async()=>{const msg=prompt("Send notification:");if(msg)await supabase.rpc("send_notification_to_user",{uid:u.id as string,msg:msg})}}><Bell size={9}/>Notify</Btn>
                       </div>
                     </td>
                   </tr>
@@ -394,8 +555,9 @@ export default function Admin() {
                     <td className="px-3 py-2">{g.filledSlots}/{g.totalSlots}</td>
                     <td className="px-3 py-2">{g.isLive?<span className="live-badge">● LIVE</span>:<span className="text-muted-foreground">Inactive</span>}</td>
                     <td className="px-3 py-2">
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-wrap">
                         <Btn variant={g.isLive?"amber":"green"} size="xs" onClick={()=>toggleGroupLive(g.id,g.isLive)}><TrendingUp size={9}/>{g.isLive?"Stop":"Live"}</Btn>
+                        <Btn variant="blue" size="xs" onClick={()=>{setShowAddSeatsModal(g.id);setAddSeatsCount("")}}><Plus size={9}/>Add Seats</Btn>
                         <Btn variant="gold" size="xs" onClick={()=>{setEditingGroup(g.id);setGName(g.name);setGDesc(g.description);setGAmt(String(g.contributionAmount));setGCycle(g.cycleType);setGSlots(String(g.totalSlots));setGBank(g.bankName||"");setGAccNum(g.accountNumber||"");setGAccName(g.accountName||"");setGPayoutAmt(String(g.payoutAmount));setGPayFreq(g.paymentFrequency);setGPayDays(String(g.paymentDays));setGDisbDays(String(g.disbursementDays));setShowCreateGroup(true)}}><Edit size={9}/>Edit</Btn>
                         <Btn variant="red" size="xs" onClick={()=>deleteGroup(g.id)}><Trash2 size={9}/>Del</Btn>
                       </div>
@@ -415,7 +577,7 @@ export default function Admin() {
               <label className="luxury-label">Select Group</label>
               <select value={memberGroupId} onChange={e=>setMemberGroupId(e.target.value)} className="luxury-input">
                 <option value="">-- Select a Group --</option>
-                {groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
+                {groups.map(g=><option key={g.id} value={g.id}>{g.name} ({g.filledSlots}/{g.totalSlots})</option>)}
               </select>
             </div>
             {memberGroupId && (
@@ -483,8 +645,8 @@ export default function Admin() {
                       <td className="px-3 py-2">
                         {tx.status === "pending" && (
                           <div className="flex gap-1">
-                            <Btn variant="green" size="xs" onClick={()=>approvePayment(tx.id as string)}><CheckCircle size={9}/>Approve</Btn>
-                            <Btn variant="red" size="xs" onClick={()=>declinePayment(tx.id as string,tx.user_id as string,tx.group_name as string)}><X size={9}/>Decline</Btn>
+                            <Btn variant="green" size="xs" onClick={()=>approvePayment(tx.id as string, tx.user_id as string, tx.group_id as string, tx.seat_numbers as string)}><CheckCircle size={9}/>Approve</Btn>
+                            <Btn variant="red" size="xs" onClick={()=>declinePayment(tx.id as string,tx.user_id as string,tx.group_name as string, tx.group_id as string, tx.seat_numbers as string)}><X size={9}/>Decline</Btn>
                           </div>
                         )}
                       </td>
@@ -515,7 +677,7 @@ export default function Admin() {
                       <td className="px-3 py-2">{d.group_name as string}</td>
                       <td className="px-3 py-2 text-muted-foreground">{d.seat_numbers as string||"-"}</td>
                       <td className="px-3 py-2 font-bold text-emerald-400">₦{Number(d.amount).toLocaleString()}</td>
-                      <td className="px-3 py-2">{d.image_url?<a href={d.image_url as string} target="_blank" rel="noreferrer" className="text-blue-400 underline text-[10px]">View</a>:"-"}</td>
+                      <td className="px-3 py-2">{d.proof_url?<a href={d.proof_url as string} target="_blank" rel="noreferrer" className="text-blue-400 underline text-[10px]">View</a>:"-"}</td>
                       <td className="px-3 py-2 text-muted-foreground text-[9px]">{new Date(d.created_at as string).toLocaleDateString()}</td>
                     </tr>
                   );
@@ -585,31 +747,96 @@ export default function Admin() {
         {sideTab === "support" && (
           <div className="animate-fade-up">
             <h2 className="gold-gradient-text font-cinzel font-bold text-2xl mb-6">Support Tickets</h2>
-            <div className="space-y-3">
-              {supportTickets.length === 0 && <div className="text-center py-12 text-muted-foreground">No support tickets</div>}
-              {supportTickets.map(t=>(
-                <div key={t.id} className="glass-card-static rounded-xl p-4 border border-gold/10">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-foreground font-semibold text-sm">{t.subject}</h3>
-                    <div className="flex items-center gap-2 flex-wrap">
+            {openTicketId ? (
+              // Ticket thread view
+              <div>
+                <Btn variant="glass" onClick={()=>{setOpenTicketId(null);setTicketReplies([])}} className="mb-4">← Back to Tickets</Btn>
+                {(() => {
+                  const t = supportTickets.find(t => t.id === openTicketId);
+                  if (!t) return null;
+                  const ticketUser = adminUsers.find(u => u.id === t.userId);
+                  return (
+                    <div className="glass-card-static rounded-2xl border border-gold/15 overflow-hidden">
+                      <div className="p-4 border-b border-gold/10">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-foreground font-bold">{t.subject}</h3>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${t.status==="open"?"text-blue-400 border-blue-600/30 bg-blue-900/20":t.status==="replied"?"text-emerald-400 border-emerald-600/30 bg-emerald-900/20":t.status==="solved"?"text-purple-400 border-purple-600/30 bg-purple-900/20":t.status==="escalated"?"text-red-400 border-red-600/30 bg-red-900/20":"text-muted-foreground border-muted/30 bg-muted/20"}`}>{t.status}</span>
+                        </div>
+                        <p className="text-muted-foreground text-xs">From: @{ticketUser?.username as string || "unknown"} · {new Date(t.createdAt).toLocaleString()}</p>
+                        <div className="flex gap-1 mt-2 flex-wrap">
+                          {t.status !== "closed" && <Btn variant="gold" size="xs" onClick={()=>{setSupportReplyText("");setSupportReplyFile(null)}}><Reply size={9}/>Reply</Btn>}
+                          {t.status !== "solved" && t.status !== "closed" && <Btn variant="blue" size="xs" onClick={()=>updateTicketStatus(t.id,"solved")}><CheckCircle size={9}/>Solved</Btn>}
+                          {t.status !== "escalated" && t.status !== "closed" && <Btn variant="amber" size="xs" onClick={()=>updateTicketStatus(t.id,"escalated")}><AlertTriangle size={9}/>Escalate</Btn>}
+                          {t.status === "closed" ? <Btn variant="green" size="xs" onClick={()=>updateTicketStatus(t.id,"open")}><RefreshCw size={9}/>Reopen</Btn> : <Btn variant="red" size="xs" onClick={()=>updateTicketStatus(t.id,"closed")}><X size={9}/>Close</Btn>}
+                        </div>
+                      </div>
+                      {/* Chat thread */}
+                      <div ref={ticketChatRef} className="p-4 space-y-3 max-h-80 overflow-y-auto scrollbar-gold">
+                        {/* Original message */}
+                        <div className="flex gap-2">
+                          <div className="w-7 h-7 rounded-full bg-blue-900/30 flex items-center justify-center text-blue-400 text-[9px] font-bold shrink-0">U</div>
+                          <div className="flex-1">
+                            <div className="bg-blue-900/10 border border-blue-600/20 rounded-xl p-3">
+                              <p className="text-xs">{t.message}</p>
+                              {t.attachmentUrl && <a href={t.attachmentUrl} target="_blank" rel="noreferrer" className="text-gold text-[10px] underline mt-1 block">📎 Attachment</a>}
+                            </div>
+                            <p className="text-muted-foreground/50 text-[9px] mt-1">{new Date(t.createdAt).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        {/* Replies */}
+                        {ticketReplies.map(r => (
+                          <div key={r.id} className={`flex gap-2 ${r.is_admin ? "flex-row-reverse" : ""}`}>
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${r.is_admin ? "bg-gold/20 text-gold" : "bg-blue-900/30 text-blue-400"}`}>
+                              {r.is_admin ? "A" : "U"}
+                            </div>
+                            <div className="flex-1">
+                              <div className={`rounded-xl p-3 ${r.is_admin ? "bg-gold/5 border border-gold/20" : "bg-blue-900/10 border border-blue-600/20"}`}>
+                                <p className="text-xs">{r.message}</p>
+                                {r.attachment_url && <a href={r.attachment_url} target="_blank" rel="noreferrer" className="text-gold text-[10px] underline mt-1 block">📎 Attachment</a>}
+                              </div>
+                              <p className={`text-muted-foreground/50 text-[9px] mt-1 ${r.is_admin ? "text-right" : ""}`}>{new Date(r.created_at).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Reply input */}
+                      {t.status !== "closed" && (
+                        <div className="p-4 border-t border-gold/10">
+                          <div className="flex gap-2">
+                            <textarea value={supportReplyText} onChange={e=>setSupportReplyText(e.target.value)} placeholder="Reply to this ticket..." className="luxury-input flex-1 resize-none h-16 text-xs"/>
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <label className="btn-glass px-3 py-1.5 rounded-lg text-[10px] cursor-pointer flex items-center gap-1">
+                              <Upload size={10}/>{supportReplyFile?supportReplyFile.name:"Attach"}
+                              <input type="file" className="hidden" onChange={e=>setSupportReplyFile(e.target.files?.[0]||null)} accept="image/*,.pdf"/>
+                            </label>
+                            <Btn variant="gold" onClick={()=>replyTicket(openTicketId!)} disabled={!supportReplyText}><Send size={10}/>Send</Btn>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              // Ticket list
+              <div className="space-y-3">
+                {supportTickets.length === 0 && <div className="text-center py-12 text-muted-foreground">No support tickets</div>}
+                {supportTickets.map(t=>(
+                  <div key={t.id} className="glass-card-static rounded-xl p-4 border border-gold/10 cursor-pointer hover:border-gold/30 transition-all" onClick={()=>{setOpenTicketId(t.id);loadTicketReplies(t.id)}}>
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-foreground font-semibold text-sm">{t.subject}</h3>
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${t.status==="open"?"text-blue-400 border-blue-600/30 bg-blue-900/20":t.status==="replied"?"text-emerald-400 border-emerald-600/30 bg-emerald-900/20":t.status==="solved"?"text-purple-400 border-purple-600/30 bg-purple-900/20":t.status==="escalated"?"text-red-400 border-red-600/30 bg-red-900/20":"text-muted-foreground border-muted/30 bg-muted/20"}`}>{t.status}</span>
                     </div>
-                  </div>
-                  <p className="text-muted-foreground text-xs mb-2">{t.message}</p>
-                  {t.attachmentUrl && <a href={t.attachmentUrl} target="_blank" rel="noreferrer" className="text-gold text-xs underline mb-2 block">View User Attachment</a>}
-                  {t.adminReply && <div className="p-2 rounded-lg bg-gold/5 border border-gold/20 mb-2"><p className="text-xs text-gold font-bold mb-1">Your Reply:</p><p className="text-xs">{t.adminReply}</p>{t.adminReplyAttachment && <a href={t.adminReplyAttachment} target="_blank" rel="noreferrer" className="text-gold text-xs underline">View Attachment</a>}</div>}
-                  <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
-                    <p className="text-muted-foreground/40 text-[9px]">{new Date(t.createdAt).toLocaleString()}</p>
-                    <div className="flex gap-1 flex-wrap">
-                      {t.status !== "closed" && <Btn variant="gold" size="xs" onClick={()=>{setShowSupportReply(t.id);setSupportReplyText("");}}><Reply size={9}/>Reply</Btn>}
-                      {t.status !== "solved" && t.status !== "closed" && <Btn variant="blue" size="xs" onClick={()=>updateTicketStatus(t.id,"solved")}><CheckCircle size={9}/>Solved</Btn>}
-                      {t.status !== "escalated" && t.status !== "closed" && <Btn variant="amber" size="xs" onClick={()=>updateTicketStatus(t.id,"escalated")}><AlertTriangle size={9}/>Escalate</Btn>}
-                      {t.status === "closed" ? <Btn variant="green" size="xs" onClick={()=>updateTicketStatus(t.id,"open")}><RefreshCw size={9}/>Reopen</Btn> : <Btn variant="red" size="xs" onClick={()=>updateTicketStatus(t.id,"closed")}><X size={9}/>Close</Btn>}
+                    <p className="text-muted-foreground text-xs mb-2 line-clamp-2">{t.message}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-muted-foreground/40 text-[9px]">{new Date(t.createdAt).toLocaleString()}</p>
+                      <Btn variant="gold" size="xs" onClick={()=>{setOpenTicketId(t.id);loadTicketReplies(t.id)}}><MessageSquare size={9}/>Open Thread</Btn>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -644,13 +871,23 @@ export default function Admin() {
         {/* ── AUDIT LOGS ── */}
         {sideTab === "audit" && isAdmin && (
           <div className="animate-fade-up">
-            <h2 className="gold-gradient-text font-cinzel font-bold text-2xl mb-6">Audit Logs</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="gold-gradient-text font-cinzel font-bold text-2xl">Audit Logs</h2>
+              <Btn variant="glass" onClick={loadData}><RefreshCw size={12}/>Refresh</Btn>
+            </div>
             <div className="glass-card-static rounded-2xl overflow-hidden">
-              <table className="w-full text-xs"><thead><tr className="border-b border-gold/10 bg-gold/5">{["User","Action","Type","Date"].map(h=><th key={h} className="px-3 py-2 text-left text-muted-foreground font-semibold text-[9px] uppercase">{h}</th>)}</tr></thead>
-              <tbody>{auditLogs.map((log,i)=>{
-                const p=log.profiles as Record<string,unknown>|null;
-                return <tr key={i} className="border-b border-white/5"><td className="px-3 py-2 text-gold">@{p?.username as string||"System"}</td><td className="px-3 py-2">{log.action as string}</td><td className="px-3 py-2 text-muted-foreground">{log.type as string}</td><td className="px-3 py-2 text-muted-foreground text-[9px]">{new Date(log.created_at as string).toLocaleString()}</td></tr>;
+              <div className="overflow-x-auto">
+              <table className="w-full text-xs"><thead><tr className="border-b border-gold/10 bg-gold/5">{["Type","Action","Admin","User ID","Date"].map(h=><th key={h} className="px-3 py-2 text-left text-muted-foreground font-semibold text-[9px] uppercase">{h}</th>)}</tr></thead>
+              <tbody>{auditLogs.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">No audit logs</td></tr> : auditLogs.map((log,i)=>{
+                return <tr key={i} className="border-b border-white/5">
+                  <td className="px-3 py-2"><span className="px-2 py-0.5 rounded-full text-[9px] font-bold border border-gold/20 bg-gold/5 text-gold">{log.type as string || "system"}</span></td>
+                  <td className="px-3 py-2 max-w-xs truncate">{log.action as string}</td>
+                  <td className="px-3 py-2 text-gold text-[10px]">{log.admin_name as string || "-"}</td>
+                  <td className="px-3 py-2 text-muted-foreground text-[9px] font-mono">{(log.user_id as string)?.slice(0,8) || "-"}</td>
+                  <td className="px-3 py-2 text-muted-foreground text-[9px]">{new Date(log.created_at as string).toLocaleString()}</td>
+                </tr>;
               })}</tbody></table>
+              </div>
             </div>
           </div>
         )}
@@ -707,7 +944,7 @@ export default function Admin() {
               <div><label className="luxury-label">Payment Days</label><input type="number" value={gPayDays} onChange={e=>setGPayDays(e.target.value)} className="luxury-input" min="1"/></div>
               <div><label className="luxury-label">Disbursement Days</label><input type="number" value={gDisbDays} onChange={e=>setGDisbDays(e.target.value)} className="luxury-input" min="1"/></div>
             </div>
-            {!editingGroup && <div><label className="luxury-label">Total Slots</label><input type="number" value={gSlots} onChange={e=>setGSlots(e.target.value)} className="luxury-input"/></div>}
+            <div><label className="luxury-label">Total Seats/Slots *</label><input type="number" value={gSlots} onChange={e=>setGSlots(e.target.value)} className="luxury-input" min="1"/><p className="text-muted-foreground text-[9px] mt-1">{editingGroup ? "Changing this won't add/remove existing slots. Use 'Add Seats' button." : "Number of seats users can select when joining."}</p></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="luxury-label">Account Name</label><input value={gAccName} onChange={e=>setGAccName(e.target.value)} className="luxury-input"/></div>
               <div><label className="luxury-label">Account Number</label><input value={gAccNum} onChange={e=>setGAccNum(e.target.value)} className="luxury-input"/></div>
@@ -749,19 +986,152 @@ export default function Admin() {
         </Modal>
       )}
 
-      {/* USER EDIT MODAL */}
+      {/* USER EDIT MODAL - Full Profile */}
       {showUserEdit && (
-        <Modal title="Edit User" onClose={()=>setShowUserEdit(null)}>
-          <div className="space-y-3">
-            <div><label className="luxury-label">Trust Score</label><input type="number" value={editedUser.trustScore||""} onChange={e=>setEditedUser(p=>({...p,trustScore:e.target.value}))} className="luxury-input" min="0" max="100"/></div>
-            {isAdmin && <div><label className="luxury-label">Role</label><select value={editedUser.role||"user"} onChange={e=>setEditedUser(p=>({...p,role:e.target.value}))} className="luxury-input"><option value="user">User</option><option value="moderator">Moderator</option><option value="admin">Admin</option></select></div>}
-            <button onClick={saveUserEdit} className="btn-gold w-full py-3 rounded-xl font-bold text-sm">Save Changes</button>
+        <Modal title="Edit User Profile" onClose={()=>setShowUserEdit(null)}>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-gold pr-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="luxury-label">First Name</label><input value={editedUser.firstName||""} onChange={e=>setEditedUser(p=>({...p,firstName:e.target.value}))} className="luxury-input"/></div>
+              <div><label className="luxury-label">Last Name</label><input value={editedUser.lastName||""} onChange={e=>setEditedUser(p=>({...p,lastName:e.target.value}))} className="luxury-input"/></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="luxury-label">Middle Name</label><input value={editedUser.middleName||""} onChange={e=>setEditedUser(p=>({...p,middleName:e.target.value}))} className="luxury-input"/></div>
+              <div><label className="luxury-label">Nickname</label><input value={editedUser.nickname||""} onChange={e=>setEditedUser(p=>({...p,nickname:e.target.value}))} className="luxury-input"/></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="luxury-label">DOB</label><input type="date" value={editedUser.dob||""} onChange={e=>setEditedUser(p=>({...p,dob:e.target.value}))} className="luxury-input"/></div>
+              <div><label className="luxury-label">Gender</label><select value={editedUser.gender||""} onChange={e=>setEditedUser(p=>({...p,gender:e.target.value}))} className="luxury-input"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+            </div>
+            <div><label className="luxury-label">Email</label><input value={editedUser.email||""} onChange={e=>setEditedUser(p=>({...p,email:e.target.value}))} className="luxury-input"/></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="luxury-label">Phone</label><input value={editedUser.phone||""} onChange={e=>setEditedUser(p=>({...p,phone:e.target.value}))} className="luxury-input"/></div>
+              <div><label className="luxury-label">WhatsApp</label><input value={editedUser.whatsappNumber||""} onChange={e=>setEditedUser(p=>({...p,whatsappNumber:e.target.value}))} className="luxury-input"/></div>
+            </div>
+            <div><label className="luxury-label">Home Address</label><input value={editedUser.homeAddress||""} onChange={e=>setEditedUser(p=>({...p,homeAddress:e.target.value}))} className="luxury-input"/></div>
+            <div><label className="luxury-label">Current Address</label><input value={editedUser.currentAddress||""} onChange={e=>setEditedUser(p=>({...p,currentAddress:e.target.value}))} className="luxury-input"/></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="luxury-label">State of Origin</label><input value={editedUser.stateOfOrigin||""} onChange={e=>setEditedUser(p=>({...p,stateOfOrigin:e.target.value}))} className="luxury-input"/></div>
+              <div><label className="luxury-label">Current State</label><input value={editedUser.currentState||""} onChange={e=>setEditedUser(p=>({...p,currentState:e.target.value}))} className="luxury-input"/></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="luxury-label">LGA</label><input value={editedUser.lga||""} onChange={e=>setEditedUser(p=>({...p,lga:e.target.value}))} className="luxury-input"/></div>
+              <div><label className="luxury-label">BVN/NIN</label><input value={editedUser.bvnNin||""} onChange={e=>setEditedUser(p=>({...p,bvnNin:e.target.value}))} className="luxury-input"/></div>
+            </div>
+            <h4 className="gold-text font-cinzel font-bold text-xs mt-4">Bank Details</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="luxury-label">Account Name</label><input value={editedUser.bankAccName||""} onChange={e=>setEditedUser(p=>({...p,bankAccName:e.target.value}))} className="luxury-input"/></div>
+              <div><label className="luxury-label">Account Number</label><input value={editedUser.bankAccNum||""} onChange={e=>setEditedUser(p=>({...p,bankAccNum:e.target.value}))} className="luxury-input"/></div>
+            </div>
+            <div><label className="luxury-label">Bank Name</label><input value={editedUser.bankName||""} onChange={e=>setEditedUser(p=>({...p,bankName:e.target.value}))} className="luxury-input"/></div>
+            <h4 className="gold-text font-cinzel font-bold text-xs mt-4">Admin Settings</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="luxury-label">Trust Score</label><input type="number" value={editedUser.trustScore||""} onChange={e=>setEditedUser(p=>({...p,trustScore:e.target.value}))} className="luxury-input" min="0" max="100"/></div>
+              {isAdmin && <div><label className="luxury-label">Role</label><select value={editedUser.role||"user"} onChange={e=>setEditedUser(p=>({...p,role:e.target.value}))} className="luxury-input"><option value="user">User</option><option value="moderator">Moderator</option><option value="admin">Admin</option></select></div>}
+            </div>
+          </div>
+          <button onClick={saveUserEdit} className="btn-gold w-full py-3 rounded-xl font-bold text-sm mt-4">Save Changes</button>
+        </Modal>
+      )}
+
+      {/* USER PROFILE VIEW MODAL */}
+      {showUserProfile && userProfileData && (
+        <Modal title="User Profile" onClose={()=>{setShowUserProfile(null);setUserProfileData(null)}}>
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto scrollbar-gold pr-1">
+            <div className="flex items-center gap-3 mb-4">
+              {userProfileData.profile_picture ? <img src={userProfileData.profile_picture as string} className="w-14 h-14 rounded-full object-cover border-2 border-gold/30" alt="" /> : <div className="w-14 h-14 rounded-full bg-gold/20 flex items-center justify-center text-gold font-bold text-xl">{(userProfileData.first_name as string)?.[0]}</div>}
+              <div>
+                <p className="text-foreground font-bold">{userProfileData.first_name as string} {userProfileData.middle_name as string || ""} {userProfileData.last_name as string}</p>
+                <p className="text-gold font-mono text-sm">@{userProfileData.username as string}</p>
+                <p className="text-muted-foreground text-xs">{userProfileData.email as string}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              {[
+                ["Nickname", userProfileData.nickname],["Gender", userProfileData.gender],["DOB", userProfileData.dob],
+                ["Phone", userProfileData.phone],["WhatsApp", userProfileData.whatsapp_number],
+                ["State of Origin", userProfileData.state_of_origin],["LGA", userProfileData.lga],
+                ["Current State", userProfileData.current_state],["Home Address", userProfileData.home_address],
+                ["Current Address", userProfileData.current_address],["BVN/NIN", userProfileData.bvn_nin],
+                ["Bank", userProfileData.bank_name],["Account Name", userProfileData.bank_acc_name],["Account Number", userProfileData.bank_acc_num],
+                ["Trust Score", userProfileData.trust_score],["Total Paid", `₦${Number(userProfileData.total_paid || 0).toLocaleString()}`],
+                ["Role", userProfileData.role],["VIP", userProfileData.is_vip ? "Yes" : "No"],
+                ["Last Login", userProfileData.last_login_at ? new Date(userProfileData.last_login_at as string).toLocaleString() : "Never"],
+              ].map(([label, val]) => (
+                <div key={label as string} className="p-2 rounded-lg bg-white/[0.02] border border-white/5">
+                  <p className="text-muted-foreground text-[9px] uppercase">{label as string}</p>
+                  <p className="text-foreground mt-0.5">{(val as string) || "-"}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Transaction History */}
+            <h4 className="gold-text font-cinzel font-bold text-xs mt-4">Transaction History</h4>
+            <div className="space-y-1">
+              {userTxHistory.length === 0 ? <p className="text-muted-foreground text-xs">No transactions</p> : userTxHistory.slice(0, 20).map((tx, i) => (
+                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] text-[10px]">
+                  <span className="text-muted-foreground">{tx.group_name as string} · {tx.seat_numbers as string || "-"}</span>
+                  <span className="text-gold font-bold">₦{Number(tx.amount).toLocaleString()}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${tx.status==="approved"?"text-emerald-400":"text-amber-400"}`}>{tx.status as string}</span>
+                  <span className="text-muted-foreground/50">{new Date(tx.created_at as string).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Audit Logs */}
+            <h4 className="gold-text font-cinzel font-bold text-xs mt-4">Audit Logs</h4>
+            <div className="space-y-1">
+              {userAuditLogs.length === 0 ? <p className="text-muted-foreground text-xs">No audit logs</p> : userAuditLogs.slice(0, 20).map((log, i) => (
+                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] text-[10px]">
+                  <span className="flex-1 truncate">{log.action as string}</span>
+                  <span className="text-muted-foreground/50 shrink-0 ml-2">{new Date(log.created_at as string).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </Modal>
       )}
 
-      {/* SUPPORT REPLY MODAL */}
-      {showSupportReply && (
+      {/* BAN REASON MODAL */}
+      {showBanModal && (
+        <Modal title="Ban User" onClose={()=>setShowBanModal(null)}>
+          <div className="space-y-3">
+            <p className="text-muted-foreground text-sm">Please provide a reason for banning this user.</p>
+            <textarea value={banReason} onChange={e=>setBanReason(e.target.value)} placeholder="Reason for ban..." className="luxury-input resize-none h-24"/>
+            <div className="flex gap-3">
+              <button onClick={()=>setShowBanModal(null)} className="btn-glass flex-1 py-2.5 rounded-xl text-sm">Cancel</button>
+              <button onClick={()=>banUser(showBanModal!)} disabled={!banReason.trim()} className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-red-900/30 border border-red-600/30 text-red-400 hover:bg-red-900/50 disabled:opacity-50">Confirm Ban</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* RESTRICT REASON MODAL */}
+      {showRestrictModal && (
+        <Modal title="Restrict & Freeze User" onClose={()=>setShowRestrictModal(null)}>
+          <div className="space-y-3">
+            <p className="text-muted-foreground text-sm">This will restrict and freeze the user. They won't be able to view or join groups, but they can still access the platform.</p>
+            <textarea value={restrictReason} onChange={e=>setRestrictReason(e.target.value)} placeholder="Reason for restriction..." className="luxury-input resize-none h-24"/>
+            <div className="flex gap-3">
+              <button onClick={()=>setShowRestrictModal(null)} className="btn-glass flex-1 py-2.5 rounded-xl text-sm">Cancel</button>
+              <button onClick={()=>restrictUser(showRestrictModal!)} disabled={!restrictReason.trim()} className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-amber-900/30 border border-amber-600/30 text-amber-400 hover:bg-amber-900/50 disabled:opacity-50">Confirm Restrict</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ADD SEATS MODAL */}
+      {showAddSeatsModal && (
+        <Modal title="Add Seats to Group" onClose={()=>setShowAddSeatsModal(null)}>
+          <div className="space-y-3">
+            <p className="text-muted-foreground text-sm">Current seats: {groups.find(g=>g.id===showAddSeatsModal)?.totalSlots}</p>
+            <div><label className="luxury-label">Number of Seats to Add</label><input type="number" value={addSeatsCount} onChange={e=>setAddSeatsCount(e.target.value)} className="luxury-input" min="1" placeholder="e.g. 50"/></div>
+            <button onClick={()=>addSeatsToGroup(showAddSeatsModal!)} disabled={!addSeatsCount || parseInt(addSeatsCount) < 1} className="btn-gold w-full py-3 rounded-xl font-bold text-sm disabled:opacity-50">Add Seats</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* SUPPORT REPLY MODAL (legacy - for list view quick reply) */}
+      {showSupportReply && !openTicketId && (
         <Modal title="Reply to Ticket" onClose={()=>setShowSupportReply(null)}>
           <div className="space-y-3">
             <textarea value={supportReplyText} onChange={e=>setSupportReplyText(e.target.value)} placeholder="Your reply..." className="luxury-input resize-none h-28"/>
@@ -771,7 +1141,7 @@ export default function Admin() {
                 <input type="file" className="hidden" onChange={e=>setSupportReplyFile(e.target.files?.[0]||null)} accept="image/*,.pdf"/>
               </label>
             </div>
-            <button onClick={()=>replyTicket(showSupportReply!)} className="btn-gold w-full py-3 rounded-xl font-bold text-sm">Send Reply</button>
+            <button onClick={()=>{replyTicket(showSupportReply!);setShowSupportReply(null)}} className="btn-gold w-full py-3 rounded-xl font-bold text-sm">Send Reply</button>
           </div>
         </Modal>
       )}
