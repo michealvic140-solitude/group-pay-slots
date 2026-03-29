@@ -34,40 +34,33 @@ export default function GroupDetail() {
   const group = groups.find(g => g.id === id);
   const pad = (n: number) => n.toString().padStart(2, "0");
 
-  // Countdown timer - supports daily/weekly/monthly
+  // Countdown timer - counts down from live_at using payment_days interval
   useEffect(() => {
-    if (!group) return;
+    if (!group || !group.isLive || !group.liveAt) return;
     const tick = () => {
-      const now = new Date();
-      const nowGMT1 = new Date(now.getTime() + 3600000);
-      let target: Date;
+      const now = Date.now();
+      const liveAt = new Date(group.liveAt!).getTime();
+      const cycleDurationMs = (group.paymentDays || 1) * 86400000;
 
-      if (group.paymentFrequency === "monthly") {
-        target = new Date(nowGMT1);
-        target.setUTCMonth(target.getUTCMonth() + 1, 1);
-        target.setUTCHours(0, 0, 0, 0);
-      } else if (group.paymentFrequency === "weekly") {
-        target = new Date(nowGMT1);
-        const daysUntilSunday = (7 - target.getUTCDay()) % 7 || 7;
-        target.setUTCDate(target.getUTCDate() + daysUntilSunday);
-        target.setUTCHours(0, 0, 0, 0);
-      } else {
-        // Daily - midnight
-        target = new Date(nowGMT1);
-        target.setUTCHours(23, 59, 59, 0);
-        if (nowGMT1 > target) target.setUTCDate(target.getUTCDate() + 1);
+      // Calculate how many full cycles have passed since live_at
+      const elapsed = now - liveAt;
+      if (elapsed < 0) {
+        // Group goes live in the future
+        setCountdown({ d: 0, h: 0, m: 0, s: 0 });
+        return;
       }
+      const currentCycleElapsed = elapsed % cycleDurationMs;
+      const remaining = cycleDurationMs - currentCycleElapsed;
 
-      const diff = Math.max(0, target.getTime() - nowGMT1.getTime());
       setCountdown({
-        d: Math.floor(diff / 86400000),
-        h: Math.floor((diff % 86400000) / 3600000),
-        m: Math.floor((diff % 3600000) / 60000),
-        s: Math.floor((diff % 60000) / 1000),
+        d: Math.floor(remaining / 86400000),
+        h: Math.floor((remaining % 86400000) / 3600000),
+        m: Math.floor((remaining % 3600000) / 60000),
+        s: Math.floor((remaining % 60000) / 1000),
       });
     };
     tick(); const iv = setInterval(tick, 1000); return () => clearInterval(iv);
-  }, [group?.paymentFrequency]);
+  }, [group?.isLive, group?.liveAt, group?.paymentDays]);
 
   const loadSlots = useCallback(async () => {
     if (!id) return; setSlotsLoading(true);
@@ -102,6 +95,39 @@ export default function GroupDetail() {
   }, [id, isLoggedIn]);
 
   if (!isLoggedIn) return <Navigate to="/login" state={{ message: "Please sign in to view group details", redirect: `/groups/${id}` }} replace />;
+  
+  // Check if user is restricted/frozen
+  if (currentUser?.isRestricted) {
+    return (
+      <div className="min-h-screen pt-16 flex items-center justify-center relative">
+        <ParticleBackground />
+        <div className="relative z-10 glass-card-static rounded-2xl p-8 max-w-md mx-4 text-center border border-amber-600/30">
+          <div className="w-16 h-16 rounded-full bg-amber-900/30 border border-amber-600/40 flex items-center justify-center mx-auto mb-4">
+            <Lock size={28} className="text-amber-400" />
+          </div>
+          <h2 className="text-amber-400 font-cinzel font-bold text-xl mb-3">Account Restricted</h2>
+          <p className="text-muted-foreground text-sm mb-4">Your account has been restricted. You cannot view or join groups until the restriction is lifted.</p>
+          <p className="text-muted-foreground text-xs">Please contact admin/support to resolve this issue.</p>
+        </div>
+      </div>
+    );
+  }
+  if (currentUser?.isFrozen) {
+    return (
+      <div className="min-h-screen pt-16 flex items-center justify-center relative">
+        <ParticleBackground />
+        <div className="relative z-10 glass-card-static rounded-2xl p-8 max-w-md mx-4 text-center border border-blue-600/30">
+          <div className="w-16 h-16 rounded-full bg-blue-900/30 border border-blue-600/40 flex items-center justify-center mx-auto mb-4">
+            <Lock size={28} className="text-blue-400" />
+          </div>
+          <h2 className="text-blue-400 font-cinzel font-bold text-xl mb-3">Account Frozen</h2>
+          <p className="text-muted-foreground text-sm mb-4">Your account has been temporarily frozen. You cannot view or join groups.</p>
+          <p className="text-muted-foreground text-xs">Please contact admin/support to resolve this issue.</p>
+        </div>
+      </div>
+    );
+  }
+  
   if (!group) return <Navigate to="/groups" replace />;
 
   // Group-specific announcements
@@ -126,7 +152,12 @@ export default function GroupDetail() {
           await supabase.from("slots").update({ user_id: currentUser.id, status: "reserved", joined_at: new Date().toISOString() }).eq("group_id", id).eq("seat_no", seatNo);
         }
       }
-      await loadSlots(); setPayStep("payment");
+      // Update filled_slots count
+      const { data: slotCount } = await supabase.from("slots").select("id").eq("group_id", id).neq("status", "available");
+      if (slotCount) {
+        await supabase.from("groups").update({ filled_slots: slotCount.length }).eq("id", id);
+      }
+      await loadSlots(); await refreshGroups(); setPayStep("payment");
     } catch (e: unknown) { setJoinError((e as Error).message || "Failed to reserve seats"); }
     setPayLoading(false);
   };
@@ -147,6 +178,7 @@ export default function GroupDetail() {
         group_id: id, group_name: group.name, user_id: currentUser.id,
         amount: totalAmt, status: "pending", seat_numbers: seatNos, screenshot_url: screenshotUrl || null,
       });
+      await supabase.from("audit_logs").insert({ user_id: currentUser.id, action: `Submitted payment of ₦${totalAmt.toLocaleString()} for ${group.name} (${seatNos})`, type: "payment" });
       await supabase.from("notifications").insert({ user_id: currentUser.id, message: `Your payment of ₦${totalAmt.toLocaleString()} for ${group.name} (Seats: ${seatNos}) is pending admin review.` });
       await loadSlots(); await refreshGroups(); setPayStep("done");
     } catch (e: unknown) { setJoinError((e as Error).message || "Payment submission failed"); }
@@ -162,6 +194,7 @@ export default function GroupDetail() {
   const handleExit = async () => {
     if (!id || !currentUser) return;
     await supabase.from("exit_requests").insert({ group_id: id, user_id: currentUser.id, reason: exitReason });
+    await supabase.from("audit_logs").insert({ user_id: currentUser.id, action: `Requested exit from group ${group.name}`, type: "group" });
     setShowExitModal(false);
     alert("Exit request sent to admin. Make sure you are not owing before leaving.");
   };
@@ -169,6 +202,7 @@ export default function GroupDetail() {
   const handleSeatChange = async () => {
     if (!id || !currentUser) return;
     await supabase.from("seat_change_requests").insert({ group_id: id, user_id: currentUser.id, current_seat: parseInt(seatChangeFrom), requested_seat: parseInt(seatChangeTo), reason: seatChangeReason });
+    await supabase.from("audit_logs").insert({ user_id: currentUser.id, action: `Requested seat change in ${group.name}: S${seatChangeFrom} → S${seatChangeTo}`, type: "group" });
     setShowSeatChangeModal(false);
     alert("Seat change request submitted to admin.");
   };
@@ -193,8 +227,11 @@ export default function GroupDetail() {
     return "🟢";
   };
 
-  const showDays = group.paymentFrequency === "weekly" || group.paymentFrequency === "monthly";
-  const claimedSlots = slots.filter(s => (s.status as unknown as string) === "claimed" || (s.status as unknown as string) === "mine");
+  const showDays = countdown.d > 0;
+  const claimedSlots = slots.filter(s => {
+    const st = s.status as unknown as string;
+    return st === "claimed" || st === "mine" || st === "reserved";
+  });
   const uniqueMembers = new Set(claimedSlots.map(s => s.userId).filter(Boolean));
 
   return (
@@ -209,7 +246,7 @@ export default function GroupDetail() {
               <div className="flex flex-col items-center md:items-start gap-2">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="live-badge text-[10px] px-3 py-1 animate-pulse">● LIVE</span>
-                  <span className="text-muted-foreground text-[10px] font-bold tracking-[0.3em] uppercase">GMT+1</span>
+                  <span className="text-muted-foreground text-[10px] font-bold tracking-[0.3em] uppercase">Payment Cycle</span>
                 </div>
                 <div className="flex items-center gap-1" style={{ fontFamily: "'Cinzel', serif" }}>
                   {showDays && (
@@ -238,7 +275,7 @@ export default function GroupDetail() {
             <div className="text-right">
               <p className="gold-gradient-text font-cinzel font-bold text-lg">{group.name}</p>
               <p className="text-muted-foreground text-xs">Deposit ₦{group.contributionAmount.toLocaleString()} → Pack ₦{group.payoutAmount.toLocaleString()}</p>
-              <p className="text-muted-foreground/60 text-[10px] capitalize">{group.paymentFrequency} payments · {group.disbursementDays} day payout</p>
+              <p className="text-muted-foreground/60 text-[10px] capitalize">{group.paymentFrequency} payments ({group.paymentDays}d) · {group.disbursementDays} day payout</p>
             </div>
           </div>
 
@@ -249,7 +286,7 @@ export default function GroupDetail() {
                 <div key={ann.id} className="flex items-start gap-2 p-3 rounded-xl bg-gold/5 border border-gold/15">
                   <Megaphone size={14} className="text-gold shrink-0 mt-0.5" />
                   <div>
-                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full mr-2 ${ann.type==="announcement"?"text-blue-400 bg-blue-900/30":ann.type==="promotion"?"text-emerald-400 bg-emerald-900/30":"text-amber-400 bg-amber-900/30"}`}>{ann.type.replace("-"," ")}</span>
+                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full mr-2 ${ann.type==="announcement"?"text-blue-400 bg-blue-900/30":ann.type==="promotion"?"text-emerald-400 bg-emerald-900/30":"text-amber-400 bg-amber-900/30"}`}>ANNOUNCEMENT</span>
                     <span className="text-foreground text-xs font-semibold">{ann.title}</span>
                     <p className="text-muted-foreground text-[11px] mt-0.5">{ann.body}</p>
                   </div>
@@ -274,7 +311,7 @@ export default function GroupDetail() {
 
         {/* Seat legend */}
         <div className="flex flex-wrap gap-3 mb-4 text-xs">
-          {[["🟢","Available"],["🔴","Taken"],["🟡","Your Seat"],["🟠","Reserved/Locked"]].map(([e,l]) => (
+          {[["🟢","Available"],["🔴","Taken/Claimed"],["🟡","Your Seat"],["🟠","Reserved"],["🔵","Selected"]].map(([e,l]) => (
             <span key={l} className="flex items-center gap-1 text-muted-foreground">{e} {l}</span>
           ))}
         </div>
@@ -289,14 +326,19 @@ export default function GroupDetail() {
                   <button onClick={() => setPayStep("confirm")} className="btn-gold px-4 py-2 rounded-xl text-xs font-bold">Next ({selectedSeats.length} seats)</button>
                 )}
               </div>
-              {slotsLoading ? <div className="text-center py-8 text-muted-foreground">Loading seats...</div> : (
-                <div className="grid grid-cols-8 sm:grid-cols-10 gap-1.5">
+              {slotsLoading ? <div className="text-center py-8 text-muted-foreground">Loading seats...</div> : slots.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm mb-1">No seats available yet</p>
+                  <p className="text-xs">Admin has not added seats to this group yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
                   {slots.map(slot => (
                     <button key={slot.id} onClick={() => handleSeatClick(slot)}
-                      className={`w-full aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all ${slotColorClass(slot)}`}
+                      className={`w-full aspect-square rounded-lg flex flex-col items-center justify-center transition-all ${slotColorClass(slot)}`}
                       title={`S${slot.seatNo} - ${slot.status}`}>
-                      <span className="text-[8px]">{statusEmoji(slot)}</span>
-                      <span className="text-[9px] ml-0.5">{slot.seatNo}</span>
+                      <span className="text-[10px]">{statusEmoji(slot)}</span>
+                      <span className="text-[11px] font-bold">{slot.seatNo}</span>
                     </button>
                   ))}
                 </div>
@@ -346,7 +388,7 @@ export default function GroupDetail() {
             {payStep === "done" && (
               <div className="mt-4 glass-card-static rounded-2xl p-5 border border-emerald-600/30 bg-emerald-900/10 animate-fade-up">
                 <p className="text-emerald-400 font-bold text-center mb-2">✓ Payment Submitted!</p>
-                <p className="text-muted-foreground text-xs text-center leading-relaxed">YOUR PAYMENT IS PENDING. The admin will confirm your payment and approve it if successfully received. This can take up to 24hrs.</p>
+                <p className="text-muted-foreground text-xs text-center leading-relaxed">YOUR PAYMENT IS PENDING. The admin will confirm your payment and approve it if successfully received. Your seat is marked as RESERVED until approved.</p>
                 <button onClick={() => { setPayStep("idle"); setSelectedSeats([]); setPayProof(null); }} className="btn-glass w-full py-2 rounded-xl text-sm mt-4">Close</button>
               </div>
             )}
@@ -378,7 +420,12 @@ export default function GroupDetail() {
                     {slot.profilePicture ? <img src={slot.profilePicture} className="w-7 h-7 rounded-full object-cover border border-gold/20 shrink-0" alt="" /> : <div className="w-7 h-7 rounded-full bg-gold-gradient flex items-center justify-center text-obsidian text-xs font-bold shrink-0">{slot.nickname?.[0] || slot.fullName?.[0] || "?"}</div>}
                     <div className="flex-1 min-w-0">
                       <p className="text-foreground text-xs truncate">{slot.nickname || slot.fullName || "Member"}</p>
-                      {slot.isVip && <span className="vip-badge text-[8px]">VIP</span>}
+                      <div className="flex items-center gap-1">
+                        {slot.isVip && <span className="vip-badge text-[8px]">VIP</span>}
+                        <span className={`text-[8px] px-1 rounded ${(slot.status as unknown as string) === "mine" || (slot.status as unknown as string) === "claimed" ? "text-emerald-400" : "text-orange-400"}`}>
+                          {(slot.status as unknown as string) === "mine" ? "claimed" : slot.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
