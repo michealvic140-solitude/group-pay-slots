@@ -691,24 +691,33 @@ export default function Admin() {
         {/* ── DEBTS ── */}
         {sideTab === "debts" && isAdmin && (
           <div className="animate-fade-up">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
               <h2 className="gold-gradient-text font-cinzel font-bold text-2xl">Debt Tracking</h2>
-              <Btn variant="amber" onClick={async()=>{await supabase.rpc("check_and_mark_defaulters");await loadData();alert("Defaulter check complete!")}}><AlertTriangle size={12}/>Check Defaulters</Btn>
+              <div className="flex gap-2">
+                <Btn variant="gold" onClick={()=>setShowAddDebtModal(true)}><Plus size={12}/>Add Debtor</Btn>
+                <Btn variant="amber" onClick={async()=>{await supabase.rpc("check_and_mark_defaulters");await loadData();alert("Defaulter check complete!")}}><AlertTriangle size={12}/>Check Defaulters</Btn>
+              </div>
             </div>
             <div className="glass-card-static rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs"><thead><tr className="border-b border-gold/10 bg-gold/5">{["User","Group","Amount","Description","Date","Status","Actions"].map(h=><th key={h} className="px-3 py-2 text-left text-muted-foreground font-semibold uppercase text-[9px]">{h}</th>)}</tr></thead>
-                <tbody>{debts.length===0?<tr><td colSpan={7} className="text-center py-8 text-muted-foreground">No debts recorded</td></tr>:debts.map((d,i)=>{
+                <table className="w-full text-xs"><thead><tr className="border-b border-gold/10 bg-gold/5">{["User","Full Name","Group","Amount","Description","Date","Status","Actions"].map(h=><th key={h} className="px-3 py-2 text-left text-muted-foreground font-semibold uppercase text-[9px]">{h}</th>)}</tr></thead>
+                <tbody>{debts.length===0?<tr><td colSpan={8} className="text-center py-8 text-muted-foreground">No debts recorded</td></tr>:debts.map((d,i)=>{
                   const p=d.profiles as Record<string,unknown>|null;
                   return (
                     <tr key={i} className="border-b border-white/5">
                       <td className="px-3 py-2">@{p?.username as string}</td>
+                      <td className="px-3 py-2 text-foreground">{p?.first_name as string} {p?.last_name as string}</td>
                       <td className="px-3 py-2">{d.group_name as string}</td>
                       <td className="px-3 py-2 font-bold text-red-400">₦{Number(d.amount).toLocaleString()}</td>
                       <td className="px-3 py-2 text-muted-foreground text-[10px]">{d.description as string||"-"}</td>
                       <td className="px-3 py-2 text-muted-foreground text-[9px]">{new Date(d.created_at as string).toLocaleDateString()}</td>
                       <td className="px-3 py-2">{d.is_paid?<span className="text-emerald-400 text-[9px] font-bold">Paid</span>:<span className="text-red-400 text-[9px] font-bold">Unpaid</span>}</td>
-                      <td className="px-3 py-2">{!d.is_paid && <Btn variant="green" size="xs" onClick={()=>resolveDebt(d.id as string)}><CheckCircle size={9}/>Resolve</Btn>}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex gap-1">
+                          {!d.is_paid && <Btn variant="green" size="xs" onClick={()=>resolveDebt(d.id as string)}><CheckCircle size={9}/>Resolve</Btn>}
+                          <Btn variant="red" size="xs" onClick={async()=>{if(!confirm("Remove this debt record?")) return; await supabase.from("user_debts").delete().eq("id",d.id as string); await loadData();}}><Trash2 size={9}/>Remove</Btn>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}</tbody></table>
