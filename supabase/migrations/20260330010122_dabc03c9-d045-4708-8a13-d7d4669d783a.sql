@@ -1,0 +1,1 @@
+CREATE POLICY "Admins can delete debts" ON public.user_debts FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'moderator')));

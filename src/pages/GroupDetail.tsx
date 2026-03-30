@@ -135,8 +135,10 @@ export default function GroupDetail() {
 
   const handleSeatClick = (slot: Slot) => {
     if (!isLoggedIn) { navigate("/login"); return; }
-    if (slot.status === "claimed" || slot.status === "locked") return;
-    if ((slot.status as unknown as string) === "mine") return;
+    if (slot.status === "locked") return;
+    // Allow clicking own seats (mine) for recurring payments
+    const isMine = (slot.status as unknown as string) === "mine";
+    if (slot.status === "claimed" && !isMine) return;
     if (slot.status === "reserved" && slot.userId !== currentUser?.id) return;
     const seatNo = slot.seatNo;
     setSelectedSeats(prev => prev.includes(seatNo) ? prev.filter(s => s !== seatNo) : [...prev, seatNo]);
@@ -148,9 +150,11 @@ export default function GroupDetail() {
     try {
       for (const seatNo of selectedSeats) {
         const existing = slots.find(s => s.seatNo === seatNo);
+        // Only reserve if seat is available (new join)
         if (existing && existing.status === "available") {
           await supabase.from("slots").update({ user_id: currentUser.id, status: "reserved", joined_at: new Date().toISOString() }).eq("group_id", id).eq("seat_no", seatNo);
         }
+        // If seat is already mine (claimed/reserved), skip reservation - go straight to payment
       }
       // Update filled_slots count
       const { data: slotCount } = await supabase.from("slots").select("id").eq("group_id", id).neq("status", "available");
@@ -209,7 +213,8 @@ export default function GroupDetail() {
 
   const slotColorClass = (slot: Slot) => {
     const s = slot.status as unknown as string;
-    if (s === "mine") return "bg-yellow-500/20 border-2 border-yellow-400 text-yellow-300 cursor-default shadow-[0_0_10px_rgba(234,179,8,0.4)]";
+    if (s === "mine" && selectedSeats.includes(slot.seatNo)) return "bg-blue-500/20 border-2 border-blue-400 text-blue-300 cursor-pointer shadow-[0_0_8px_rgba(59,130,246,0.4)]";
+    if (s === "mine") return "bg-yellow-500/20 border-2 border-yellow-400 text-yellow-300 cursor-pointer shadow-[0_0_10px_rgba(234,179,8,0.4)]";
     if (s === "claimed") return "bg-red-900/30 border border-red-600/40 text-red-400 cursor-not-allowed";
     if (s === "reserved") return "bg-orange-900/30 border border-orange-500/50 text-orange-400 cursor-not-allowed";
     if (s === "locked") return "bg-amber-900/25 border border-amber-500/40 text-amber-500 cursor-not-allowed";
@@ -311,7 +316,7 @@ export default function GroupDetail() {
 
         {/* Seat legend */}
         <div className="flex flex-wrap gap-3 mb-4 text-xs">
-          {[["🟢","Available"],["🔴","Taken/Claimed"],["🟡","Your Seat"],["🟠","Reserved"],["🔵","Selected"]].map(([e,l]) => (
+          {[["🟢","Available"],["🔴","Taken/Claimed"],["🟡","Your Seat (click to re-pay)"],["🟠","Reserved"],["🔵","Selected"]].map(([e,l]) => (
             <span key={l} className="flex items-center gap-1 text-muted-foreground">{e} {l}</span>
           ))}
         </div>
