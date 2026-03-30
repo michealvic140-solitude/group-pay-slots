@@ -213,7 +213,8 @@ export default function GroupDetail() {
 
   const slotColorClass = (slot: Slot) => {
     const s = slot.status as unknown as string;
-    if (s === "mine") return "bg-yellow-500/20 border-2 border-yellow-400 text-yellow-300 cursor-default shadow-[0_0_10px_rgba(234,179,8,0.4)]";
+    if (s === "mine" && selectedSeats.includes(slot.seatNo)) return "bg-blue-500/20 border-2 border-blue-400 text-blue-300 cursor-pointer shadow-[0_0_8px_rgba(59,130,246,0.4)]";
+    if (s === "mine") return "bg-yellow-500/20 border-2 border-yellow-400 text-yellow-300 cursor-pointer shadow-[0_0_10px_rgba(234,179,8,0.4)]";
     if (s === "claimed") return "bg-red-900/30 border border-red-600/40 text-red-400 cursor-not-allowed";
     if (s === "reserved") return "bg-orange-900/30 border border-orange-500/50 text-orange-400 cursor-not-allowed";
     if (s === "locked") return "bg-amber-900/25 border border-amber-500/40 text-amber-500 cursor-not-allowed";
