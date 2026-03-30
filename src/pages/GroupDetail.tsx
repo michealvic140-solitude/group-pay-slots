@@ -70,7 +70,7 @@ export default function GroupDetail() {
         const profile = s.profiles as Record<string, unknown> | null;
         let status: Slot["status"] = s.status as Slot["status"];
         if (s.user_id === currentUser?.id && (status === "claimed" || status === "reserved")) status = "mine" as unknown as Slot["status"];
-        return { id: s.id as number, groupId: s.group_id as string, seatNo: s.seat_no as number, userId: s.user_id as string | undefined, status, isDisbursed: Boolean(s.is_disbursed), nickname: profile?.nickname as string | undefined, fullName: profile?.first_name as string | undefined, isVip: Boolean(profile?.is_vip), profilePicture: profile?.profile_picture as string | undefined };
+        return { id: s.id as number, groupId: s.group_id as string, seatNo: s.seat_no as number, userId: s.user_id as string | undefined, status, isDisbursed: Boolean(s.is_disbursed), nickname: profile?.nickname as string | undefined, fullName: profile?.first_name as string | undefined, isVip: Boolean(profile?.is_vip), profilePicture: profile?.profile_picture as string | undefined, trustScore: Number(profile?.trust_score) || 50 };
       });
       setSlots(mapped);
     }
