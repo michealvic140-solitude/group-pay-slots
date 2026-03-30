@@ -80,6 +80,8 @@ export default function Admin() {
 
   // Debts tab
   const [debts, setDebts] = useState<Record<string,unknown>[]>([]);
+  const [showAddDebtModal, setShowAddDebtModal] = useState(false);
+  const [debtUserId, setDebtUserId] = useState(""); const [debtGroupId, setDebtGroupId] = useState(""); const [debtAmount, setDebtAmount] = useState(""); const [debtDesc, setDebtDesc] = useState("");
 
   // Support ticket thread
   const [ticketReplies, setTicketReplies] = useState<TicketReply[]>([]);
