@@ -135,8 +135,10 @@ export default function GroupDetail() {
 
   const handleSeatClick = (slot: Slot) => {
     if (!isLoggedIn) { navigate("/login"); return; }
-    if (slot.status === "claimed" || slot.status === "locked") return;
-    if ((slot.status as unknown as string) === "mine") return;
+    if (slot.status === "locked") return;
+    // Allow clicking own seats (mine) for recurring payments
+    const isMine = (slot.status as unknown as string) === "mine";
+    if (slot.status === "claimed" && !isMine) return;
     if (slot.status === "reserved" && slot.userId !== currentUser?.id) return;
     const seatNo = slot.seatNo;
     setSelectedSeats(prev => prev.includes(seatNo) ? prev.filter(s => s !== seatNo) : [...prev, seatNo]);
@@ -148,9 +150,11 @@ export default function GroupDetail() {
     try {
       for (const seatNo of selectedSeats) {
         const existing = slots.find(s => s.seatNo === seatNo);
+        // Only reserve if seat is available (new join)
         if (existing && existing.status === "available") {
           await supabase.from("slots").update({ user_id: currentUser.id, status: "reserved", joined_at: new Date().toISOString() }).eq("group_id", id).eq("seat_no", seatNo);
         }
+        // If seat is already mine (claimed/reserved), skip reservation - go straight to payment
       }
       // Update filled_slots count
       const { data: slotCount } = await supabase.from("slots").select("id").eq("group_id", id).neq("status", "available");
