@@ -1187,6 +1187,36 @@ export default function Admin() {
           </div>
         </Modal>
       )}
+
+      {/* ADD DEBT MODAL */}
+      {showAddDebtModal && (
+        <Modal title="Add Debtor Manually" onClose={()=>setShowAddDebtModal(false)}>
+          <div className="space-y-3">
+            <div><label className="luxury-label">Select User *</label>
+              <select value={debtUserId} onChange={e=>setDebtUserId(e.target.value)} className="luxury-input">
+                <option value="">-- Select User --</option>
+                {adminUsers.filter(u=>u.role!=="admin").map(u=><option key={u.id as string} value={u.id as string}>@{u.username as string} - {u.first_name as string} {u.last_name as string}</option>)}
+              </select>
+            </div>
+            <div><label className="luxury-label">Select Group *</label>
+              <select value={debtGroupId} onChange={e=>setDebtGroupId(e.target.value)} className="luxury-input">
+                <option value="">-- Select Group --</option>
+                {groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </div>
+            <div><label className="luxury-label">Amount (₦)</label><input type="number" value={debtAmount} onChange={e=>setDebtAmount(e.target.value)} placeholder="0" className="luxury-input"/></div>
+            <div><label className="luxury-label">Description</label><textarea value={debtDesc} onChange={e=>setDebtDesc(e.target.value)} placeholder="Reason for debt..." className="luxury-input resize-none h-16"/></div>
+            <button onClick={async()=>{
+              if(!debtUserId||!debtGroupId) return;
+              const selectedGroup = groups.find(g=>g.id===debtGroupId);
+              await supabase.from("user_debts").insert({ user_id: debtUserId, group_id: debtGroupId, group_name: selectedGroup?.name || "", amount: parseFloat(debtAmount)||0, description: debtDesc || "Manually added by admin", is_paid: false });
+              await supabase.rpc("send_notification_to_user", { uid: debtUserId, msg: `You have been marked as a debtor in ${selectedGroup?.name || "a group"}. Reason: ${debtDesc || "Admin decision"}. Contact admin for details.` });
+              await supabase.from("audit_logs").insert({ admin_id: currentUser!.id, admin_name: currentUser!.username, user_id: debtUserId, action: `Manually added debt for ${selectedGroup?.name}: ₦${parseFloat(debtAmount)||0}`, type: "debt" });
+              setShowAddDebtModal(false); setDebtUserId(""); setDebtGroupId(""); setDebtAmount(""); setDebtDesc(""); await loadData();
+            }} disabled={!debtUserId||!debtGroupId} className="btn-gold w-full py-3 rounded-xl font-bold text-sm disabled:opacity-50">Add Debtor</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
