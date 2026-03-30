@@ -316,7 +316,7 @@ export default function GroupDetail() {
 
         {/* Seat legend */}
         <div className="flex flex-wrap gap-3 mb-4 text-xs">
-          {[["🟢","Available"],["🔴","Taken/Claimed"],["🟡","Your Seat"],["🟠","Reserved"],["🔵","Selected"]].map(([e,l]) => (
+          {[["🟢","Available"],["🔴","Taken/Claimed"],["🟡","Your Seat (click to re-pay)"],["🟠","Reserved"],["🔵","Selected"]].map(([e,l]) => (
             <span key={l} className="flex items-center gap-1 text-muted-foreground">{e} {l}</span>
           ))}
         </div>

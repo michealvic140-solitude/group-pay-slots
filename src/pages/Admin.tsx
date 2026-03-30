@@ -629,13 +629,14 @@ export default function Admin() {
             <h2 className="gold-gradient-text font-cinzel font-bold text-2xl mb-6">Payment Management</h2>
             <div className="glass-card-static rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs"><thead><tr className="border-b border-gold/10 bg-gold/5">{["Code","User","Group","Seats","Amount","Proof","Status","Date","Actions"].map(h=><th key={h} className="px-3 py-2 text-left text-muted-foreground font-semibold uppercase text-[9px] whitespace-nowrap">{h}</th>)}</tr></thead>
-                <tbody>{adminPayments.map((tx,i)=>{
+                <table className="w-full text-xs"><thead><tr className="border-b border-gold/10 bg-gold/5">{["Code","User","Full Name","Group","Seats","Amount","Proof","Status","Date","Actions"].map(h=><th key={h} className="px-3 py-2 text-left text-muted-foreground font-semibold uppercase text-[9px] whitespace-nowrap">{h}</th>)}</tr></thead>
+                <tbody>{adminPayments.length === 0 ? <tr><td colSpan={10} className="text-center py-8 text-muted-foreground">No payments yet</td></tr> : adminPayments.map((tx,i)=>{
                   const profile = tx.profiles as Record<string,unknown>|null;
                   return (
                     <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
                       <td className="px-3 py-2 font-mono text-gold text-[10px]">{tx.code as string}</td>
-                      <td className="px-3 py-2">@{profile?.username as string}</td>
+                      <td className="px-3 py-2">@{profile?.username as string || "unknown"}</td>
+                      <td className="px-3 py-2 text-foreground font-medium">{profile?.first_name as string || ""} {profile?.last_name as string || ""}</td>
                       <td className="px-3 py-2">{tx.group_name as string}</td>
                       <td className="px-3 py-2 text-muted-foreground">{tx.seat_numbers as string||"-"}</td>
                       <td className="px-3 py-2 font-bold text-gold">₦{Number(tx.amount).toLocaleString()}</td>
