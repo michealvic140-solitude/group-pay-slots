@@ -429,23 +429,42 @@ export default function GroupDetail() {
                 <h3 className="gold-text font-cinzel font-bold text-sm flex items-center gap-2"><Users size={14} />Members</h3>
                 <p className="text-muted-foreground text-[10px] mt-0.5">{uniqueMembers.size} users · {claimedSlots.length} seats</p>
               </div>
-              <div className="p-3 space-y-1.5 max-h-64 overflow-y-auto scrollbar-gold">
-                {claimedSlots.length === 0 && <p className="text-muted-foreground text-xs text-center py-4">No members yet</p>}
-                {claimedSlots.sort((a,b)=>a.seatNo-b.seatNo).map(slot => (
-                  <div key={slot.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gold/5 transition-colors">
-                    <span className="text-gold text-xs font-mono font-bold w-8 shrink-0">S{slot.seatNo}</span>
-                    {slot.profilePicture ? <img src={slot.profilePicture} className="w-7 h-7 rounded-full object-cover border border-gold/20 shrink-0" alt="" /> : <div className="w-7 h-7 rounded-full bg-gold-gradient flex items-center justify-center text-obsidian text-xs font-bold shrink-0">{slot.nickname?.[0] || slot.fullName?.[0] || "?"}</div>}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-foreground text-xs truncate">{slot.nickname || slot.fullName || "Member"}</p>
-                      <div className="flex items-center gap-1">
-                        {slot.isVip && <span className="vip-badge text-[8px]">VIP</span>}
-                        <span className={`text-[8px] px-1 rounded ${(slot.status as unknown as string) === "mine" || (slot.status as unknown as string) === "claimed" ? "text-emerald-400" : "text-orange-400"}`}>
-                          {(slot.status as unknown as string) === "mine" ? "claimed" : slot.status}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+               <div className="p-3 space-y-1.5 max-h-72 overflow-y-auto scrollbar-gold">
+                 {claimedSlots.length === 0 && <p className="text-muted-foreground text-xs text-center py-4">No members yet</p>}
+                 {claimedSlots.sort((a,b)=>a.seatNo-b.seatNo).map(slot => {
+                   const hasPaidToday = slot.userId ? paidUserIds.has(slot.userId) : false;
+                   return (
+                     <div key={slot.id} className="flex items-center gap-2 p-2.5 rounded-xl hover:bg-gold/5 transition-colors border border-transparent hover:border-gold/10">
+                       {/* Seat number */}
+                       <span className="text-gold text-xs font-mono font-bold w-8 shrink-0 text-center bg-gold/10 rounded-md py-1">S{slot.seatNo}</span>
+                       {/* Profile image */}
+                       {slot.profilePicture ? (
+                         <img src={slot.profilePicture} className="w-8 h-8 rounded-full object-cover border-2 border-gold/30 shrink-0" alt="" />
+                       ) : (
+                         <div className="w-8 h-8 rounded-full bg-gold-gradient flex items-center justify-center text-obsidian text-xs font-bold shrink-0 border-2 border-gold/30">
+                           {slot.nickname?.[0] || slot.fullName?.[0] || "?"}
+                         </div>
+                       )}
+                       {/* Info */}
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center gap-1.5">
+                           <p className="text-foreground text-xs font-semibold truncate">{slot.nickname || slot.fullName || "Member"}</p>
+                           {slot.isVip && <span className="vip-badge text-[7px] px-1.5 py-0.5">VIP</span>}
+                         </div>
+                         <div className="flex items-center gap-2 mt-0.5">
+                           {/* Payment status */}
+                           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${hasPaidToday ? "bg-emerald-900/40 text-emerald-400 border border-emerald-500/30" : "bg-red-900/30 text-red-400 border border-red-500/30"}`}>
+                             {hasPaidToday ? "✓ Paid Today" : "⏳ Awaiting"}
+                           </span>
+                           {/* Trust score */}
+                           <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                             <span className="text-gold">★</span>{(slot as Record<string, unknown>).trustScore as number || 50}
+                           </span>
+                         </div>
+                       </div>
+                     </div>
+                   );
+                 })}
               </div>
             </div>
 
