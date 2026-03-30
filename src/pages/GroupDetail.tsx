@@ -458,7 +458,7 @@ export default function GroupDetail() {
                            </span>
                            {/* Trust score */}
                            <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
-                             <span className="text-gold">★</span>{(slot as Record<string, unknown>).trustScore as number || 50}
+                             <span className="text-gold">★</span>{slot.trustScore || 50}
                            </span>
                          </div>
                        </div>
