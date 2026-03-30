@@ -80,6 +80,17 @@ export default function GroupDetail() {
 
   useEffect(() => { loadSlots(); }, [loadSlots]);
 
+  // Check who has paid today for this group
+  useEffect(() => {
+    if (!id) return;
+    const checkPaid = async () => {
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      const { data } = await supabase.from("transactions").select("user_id").eq("group_id", id).eq("status", "approved").gte("created_at", todayStart.toISOString());
+      if (data) setPaidUserIds(new Set(data.map((t: Record<string, unknown>) => t.user_id as string)));
+    };
+    checkPaid();
+  }, [id, slots]);
+
   // Chat - load initially then realtime
   useEffect(() => {
     if (!id || !isLoggedIn) return;
