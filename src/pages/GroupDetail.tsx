@@ -64,7 +64,7 @@ export default function GroupDetail() {
 
   const loadSlots = useCallback(async () => {
     if (!id) return; setSlotsLoading(true);
-    const { data } = await supabase.from("slots").select("*, profiles(first_name, nickname, is_vip, profile_picture)").eq("group_id", id).order("seat_no");
+    const { data } = await supabase.from("slots").select("*, profiles(first_name, nickname, is_vip, profile_picture, trust_score)").eq("group_id", id).order("seat_no");
     if (data) {
       const mapped: Slot[] = data.map((s: Record<string, unknown>) => {
         const profile = s.profiles as Record<string, unknown> | null;
