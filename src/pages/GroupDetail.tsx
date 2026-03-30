@@ -13,7 +13,8 @@ export default function GroupDetail() {
   const navigate = useNavigate();
   const { groups, isLoggedIn, currentUser, refreshGroups, announcements } = useApp();
 
-  const [slots, setSlots] = useState<Slot[]>([]);
+  const [slots, setSlots] = useState<(Slot & { trustScore?: number })[]>([]);
+  const [paidUserIds, setPaidUserIds] = useState<Set<string>>(new Set());
   const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
   const [payStep, setPayStep] = useState<"idle"|"select"|"confirm"|"payment"|"proof"|"done">("idle");
   const [payProof, setPayProof] = useState<File | null>(null);
